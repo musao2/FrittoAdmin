@@ -32,16 +32,22 @@ export function AuthProvider({ children }) {
     })
 
     // Auth holat o'zgarishlarini kuzat
+    // DIQQAT: bu funksiya ichida Supabase'ga so'rov yuborib uni KUTMANG (await) —
+    // kirish jarayoni bilan bir-birini kutib qolib, "Kirish" tugmasi abadiy osilib qoladi.
+    // Shuning uchun profilni setTimeout orqali kirish tugagandan keyin yuklaymiz.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         if (session?.user) {
           setUser(session.user)
-          await loadProfile(session.user.id)
+          const userId = session.user.id
+          setTimeout(() => {
+            loadProfile(userId).finally(() => setLoading(false))
+          }, 0)
         } else {
           setUser(null)
           setProfile(null)
+          setLoading(false)
         }
-        setLoading(false)
       }
     )
 
