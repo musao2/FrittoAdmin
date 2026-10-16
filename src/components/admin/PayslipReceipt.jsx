@@ -2,7 +2,7 @@ import { LuX, LuBanknote, LuPrinter } from 'react-icons/lu'
 import { formatMoney, formatTashkentDate, formatTashkentDateTime } from '../../lib/supabase'
 import { getRemaining } from './SalaryBreakdown'
 import PaymentMethod from './PaymentMethod'
-import { LogoMark } from '../Logo'
+import { FrittoLogo } from '../Logo'
 
 const MONTHS = [
   'Yanvar','Fevral','Mart','Aprel','May','Iyun',
@@ -76,9 +76,8 @@ export default function PayslipReceipt({ item, data, loading, month, year, onClo
             <div id="printable-receipt" className="bg-white px-7 py-6">
               {/* Boshi */}
               <div className="text-center">
-                <div className="flex justify-center mb-2"><LogoMark size={36} /></div>
-                <p className="text-base font-bold text-slate-900 tracking-[0.12em]">FRITTO</p>
-                <p className="text-xs text-slate-500 mt-0.5">Ish haqi cheki</p>
+                <FrittoLogo className="h-16 w-auto mx-auto text-[#111111]" />
+                <p className="text-xs text-slate-500 mt-3">Ish haqi cheki</p>
                 <p className="text-sm font-medium text-slate-900 mt-3">{MONTHS[month - 1]} {year}</p>
               </div>
 

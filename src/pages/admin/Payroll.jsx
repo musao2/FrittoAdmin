@@ -36,6 +36,7 @@ import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import SalaryBreakdown, { getRemaining } from '../../components/admin/SalaryBreakdown'
 import PayslipReceipt from '../../components/admin/PayslipReceipt'
+import { useBranch } from '../../context/BranchContext'
 
 const MONTHS = [
   'Yanvar','Fevral','Mart','Aprel','May','Iyun',
@@ -43,6 +44,7 @@ const MONTHS = [
 ]
 
 export default function AdminPayroll() {
+  const { matchEmployee } = useBranch()
   const { user } = useAuth()
   const now = new Date()
   const [year, setYear]   = useState(now.getFullYear())
@@ -113,13 +115,13 @@ export default function AdminPayroll() {
       }
 
       const it = await payrollFunctions.getItems(p.id)
-      setItems(it)
+      setItems(it.filter(i => matchEmployee(i.employees)))
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [year, month])
+  }, [year, month, matchEmployee])
 
   useEffect(() => { load() }, [load])
 
@@ -838,7 +840,7 @@ export default function AdminPayroll() {
                 className="btn-primary flex-1"
               >
                 {submitting
-                  ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ? <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
                   : <LuCheck size={16} />}
                 {Number(payForm.amount) > 0 ? `${formatMoney(Number(payForm.amount))} berildi` : 'Pul berildi'}
               </button>
@@ -872,7 +874,7 @@ export default function AdminPayroll() {
                         : 'bg-white text-slate-600 border-slate-200'
                     }`}
                   >
-                    <LuPlus size={14} className="inline mr-1 text-emerald-600" /> Bonus
+                    <LuPlus size={14} className="inline mr-1 text-emerald-700" /> Bonus
                   </button>
                   <button
                     onClick={() => setAdjForm({...adjForm, type: 'deduction'})}
@@ -910,7 +912,7 @@ export default function AdminPayroll() {
             <div className="flex justify-end gap-2 px-5 pb-5">
               <button onClick={() => setAdjModal(false)} className="btn-secondary">Bekor qilish</button>
               <button onClick={handleAdj} disabled={submitting} className="btn-primary disabled:opacity-50 font-bold">
-                {submitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {submitting && <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />}
                 Saqlash
               </button>
             </div>
@@ -1009,7 +1011,7 @@ export default function AdminPayroll() {
                   onClick={() => setHistoryTab(tab.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     historyTab === tab.id
-                      ? 'bg-emerald-600 text-white'
+                      ? 'bg-emerald-600 text-slate-950'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >

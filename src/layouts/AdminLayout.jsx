@@ -14,11 +14,13 @@ import {
   LuMenu,
   LuX,
   LuShieldCheck,
+  LuMapPin,
 } from 'react-icons/lu'
 import { FiBarChart2 } from 'react-icons/fi'
 import NotificationBell from '../components/admin/NotificationBell'
 import { supabase } from '../lib/supabase'
 import Logo from '../components/Logo'
+import BranchSwitcher from '../components/admin/BranchSwitcher'
 
 // Menyu guruhlari — har bir bo'lim oddiy, tushunarli nom bilan
 const NAV_GROUPS = [
@@ -35,6 +37,7 @@ const NAV_GROUPS = [
       { path: '/admin/trials',     label: 'Sinov muddati',      icon: LuClipboardList },
       { path: '/admin/attendance', label: 'Davomat',            icon: LuClock },
       { path: '/admin/devices',    label: 'Kirish so\'rovlari', icon: LuShieldCheck, badge: 'devices' },
+      { path: '/admin/branches',   label: 'Filiallar va QR',    icon: LuMapPin },
     ],
   },
   {
@@ -169,9 +172,11 @@ export default function AdminLayout() {
             <LuMenu size={20} />
           </button>
 
-          <p className="text-base font-semibold text-slate-900 truncate">
+          <p className="hidden md:block text-base font-semibold text-slate-900 truncate">
             {current?.label || 'FRITTO'}
           </p>
+
+          <BranchSwitcher />
 
           <div className="flex items-center gap-3 ml-auto">
             <NotificationBell />

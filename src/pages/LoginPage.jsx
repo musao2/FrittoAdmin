@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { LogoMark } from '../components/Logo'
+import { FrittoLogo } from '../components/Logo'
 import { LuEye, LuEyeOff, LuLock, LuMail, LuCircleAlert } from 'react-icons/lu'
 
 export default function LoginPage() {
@@ -36,9 +36,8 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="inline-flex mb-3"><LogoMark size={48} /></div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-[0.08em]">FRITTO</h1>
-          <p className="text-sm text-slate-500 mt-1">Admin panel</p>
+          <FrittoLogo className="h-24 w-auto mx-auto text-[#111111]" />
+          <p className="text-sm text-slate-500 mt-4">Admin panel</p>
         </div>
 
         <div className="bg-white border border-slate-200 rounded-xl p-6">
@@ -102,7 +101,7 @@ export default function LoginPage() {
             >
               {submitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
                   Kirilmoqda...
                 </>
               ) : 'Kirish'}

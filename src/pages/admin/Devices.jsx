@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { LuSmartphone, LuCheck, LuX, LuShieldCheck, LuBan } from 'react-icons/lu'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useBranch } from '../../context/BranchContext'
 
 const TZ = 'Asia/Tashkent'
 const TABS = [
@@ -21,6 +22,7 @@ const when = (iso) => {
 }
 
 export default function AdminDevices() {
+  const { matchEmployee } = useBranch()
   const { user } = useAuth()
   const [tab, setTab]         = useState('pending')
   const [rows, setRows]       = useState([])
@@ -31,7 +33,7 @@ export default function AdminDevices() {
   const load = useCallback(async () => {
     const { data, error } = await supabase
       .from('employee_devices')
-      .select('*, employees(full_name, position, branch)')
+      .select('*, employees(full_name, position, branch, branch_id)')
       .order('requested_at', { ascending: false })
     if (error) {
       setError(error.code === '42P01' || error.message?.includes('employee_devices')
@@ -39,10 +41,10 @@ export default function AdminDevices() {
         : error.message)
     } else {
       setError(null)
-      setRows(data || [])
+      setRows((data || []).filter(r => matchEmployee(r.employees)))
     }
     setLoading(false)
-  }, [])
+  }, [matchEmployee])
 
   useEffect(() => {
     load()
@@ -116,6 +118,9 @@ export default function AdminDevices() {
                     So'radi: {when(r.requested_at)}
                     {r.status !== 'pending' && <> · Oxirgi kirish: {when(r.last_seen_at)}</>}
                   </p>
+                  {r.request_count > 1 && (
+                    <span className="badge-yellow mt-1.5">Rad etilgandan keyin qayta so'radi · {r.request_count}-marta</span>
+                  )}
                 </div>
               </div>
 

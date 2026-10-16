@@ -35,7 +35,7 @@ export default function KioskLoginSettings() {
   return (
     <div className="card">
       <h2 className="section-title mb-1">
-        <LuQrCode size={16} className="text-emerald-600" />
+        <LuQrCode size={16} className="text-emerald-700" />
         QR ekranga kirish
       </h2>
       <p className="text-sm text-slate-500 mb-4">
@@ -147,7 +147,7 @@ function KioskForm({ kiosk }) {
 
       <div className="flex items-center gap-3">
         <button type="submit" disabled={busy || !changed || mismatch} className="btn-primary">
-          {busy ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <LuSave size={16} />}
+          {busy ? <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" /> : <LuSave size={16} />}
           Saqlash
         </button>
         {saved && (

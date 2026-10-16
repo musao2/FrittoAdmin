@@ -20,7 +20,7 @@ import {
   employeeFunctions, attendanceFunctions, advanceFunctions,
   payrollFunctions, formatMoney, formatTashkentDateTime
 } from '../../lib/supabase'
-import { useAuth } from '../../context/AuthContext'
+import { useBranch } from '../../context/BranchContext'
 import { Link } from 'react-router-dom'
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -40,7 +40,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 }
 
 export default function AdminDashboard() {
-  const { user } = useAuth()
+  const { matchEmployee } = useBranch()
   const [stats, setStats]                 = useState(null)
   const [todaySessions, setTodaySessions] = useState([])
   const [recentSessions, setRecentSessions] = useState([])
@@ -56,14 +56,16 @@ export default function AdminDashboard() {
   const load = useCallback(async () => {
     try {
       const [empStats, todaySess, recentSess] = await Promise.all([
-        employeeFunctions.getDashboardStats(),
+        employeeFunctions.getDashboardStats(matchEmployee),
         attendanceFunctions.getTodayStats(),
-        attendanceFunctions.getAll({ limit: 10 }),
+        attendanceFunctions.getAll({ limit: 60 }),
       ])
 
+      // Tanlangan filial bo'yicha filtrlash
+      const ids = new Set(empStats.employeeIds)
       setStats(empStats)
-      setTodaySessions(todaySess)
-      setRecentSessions(recentSess)
+      setTodaySessions(todaySess.filter(s => ids.has(s.employee_id)))
+      setRecentSessions(recentSess.filter(s => matchEmployee(s.employees)))
 
       // Oxirgi 6 oy ma'lumoti
       const months = []
@@ -85,13 +87,15 @@ export default function AdminDashboard() {
               month: m.month,
               status: 'approved'
             })
-            const totalEarned = payroll.reduce((acc, p) => acc + (p.earned_salary || 0), 0)
-            const totalAdv = advances.reduce((acc, a) => acc + (a.amount || 0), 0)
+            const myPayroll = payroll.filter(p => ids.has(p.employee_id))
+            const myAdvances = advances.filter(a => matchEmployee(a.employees))
+            const totalEarned = myPayroll.reduce((acc, p) => acc + (p.earned_salary || 0), 0)
+            const totalAdv = myAdvances.reduce((acc, a) => acc + (a.amount || 0), 0)
             return {
               name: m.name,
               earned: totalEarned,
               advances: totalAdv,
-              workers: payroll.length,
+              workers: myPayroll.length,
             }
           } catch {
             return { name: m.name, earned: 0, advances: 0, workers: 0 }
@@ -107,7 +111,7 @@ export default function AdminDashboard() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [thisYear, thisMonth])
+  }, [thisYear, thisMonth, matchEmployee])
 
   useEffect(() => {
     load()
@@ -150,7 +154,7 @@ export default function AdminDashboard() {
           disabled={refreshing}
           className="btn-secondary"
         >
-          <LuRefreshCw size={14} className={refreshing ? 'animate-spin text-emerald-600' : 'text-slate-500'} />
+          <LuRefreshCw size={14} className={refreshing ? 'animate-spin text-emerald-700' : 'text-slate-500'} />
           Yangilash
         </button>
       </div>
@@ -226,7 +230,7 @@ export default function AdminDashboard() {
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-title">
-              <LuTrendingUp size={18} className="text-emerald-600" />
+              <LuTrendingUp size={18} className="text-emerald-700" />
               Oylik ish haqi va avanslar statistikasi
             </h2>
           </div>
@@ -235,8 +239,8 @@ export default function AdminDashboard() {
               <AreaChart data={monthlyData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="earnedGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#4f46e5" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#4f46e5" stopOpacity={0} />
+                    <stop offset="5%"  stopColor="#FCA914" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#FCA914" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="advGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.2} />
@@ -247,7 +251,7 @@ export default function AdminDashboard() {
                 <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis hide />
                 <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="earned"   name="Ish haqi" stroke="#4f46e5" fill="url(#earnedGrad)" strokeWidth={2.5} dot={false} />
+                <Area type="monotone" dataKey="earned"   name="Ish haqi" stroke="#FCA914" fill="url(#earnedGrad)" strokeWidth={2.5} dot={false} />
                 <Area type="monotone" dataKey="advances" name="Avanslar" stroke="#8b5cf6" fill="url(#advGrad)"    strokeWidth={2} dot={false} />
               </AreaChart>
             </ResponsiveContainer>
@@ -262,7 +266,7 @@ export default function AdminDashboard() {
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="section-title">
-              <LuUsers size={18} className="text-emerald-600" />
+              <LuUsers size={18} className="text-emerald-700" />
               Oylik xodimlar hisob-kitobi
             </h2>
           </div>
@@ -273,7 +277,7 @@ export default function AdminDashboard() {
                 <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis hide />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="workers" name="Xodimlar soni" fill="#818cf8" radius={[6, 6, 0, 0]} maxBarSize={36} />
+                <Bar dataKey="workers" name="Xodimlar soni" fill="#111111" radius={[6, 6, 0, 0]} maxBarSize={36} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -288,7 +292,7 @@ export default function AdminDashboard() {
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="section-title">
-            <LuClock size={18} className="text-emerald-600" />
+            <LuClock size={18} className="text-emerald-700" />
             So'nggi davomat yozuvlari
           </h2>
           <Link

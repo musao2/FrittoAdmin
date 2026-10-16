@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { LuSettings, LuInfo, LuDatabase, LuCircleCheck, LuCircleX, LuTriangleAlert, LuCheck } from "react-icons/lu"
 import KioskLoginSettings from '../../components/admin/KioskLoginSettings'
+import { Link } from 'react-router-dom'
+import { LuMapPin, LuChevronRight } from 'react-icons/lu'
 
 export default function AdminSettings() {
   const [latenessThreshold, setLatenessThreshold] = useState(10)
@@ -22,18 +24,31 @@ export default function AdminSettings() {
     <div className="p-4 lg:p-6 space-y-5 animate-fade-in">
       <div>
         <h1 className="page-title flex items-center gap-2">
-          <LuSettings size={20} className="text-emerald-600" />
+          <LuSettings size={20} className="text-emerald-700" />
           Sozlamalar
         </h1>
         <p className="page-subtitle">Tizimning umumiy sozlamalari</p>
       </div>
+
+      <Link to="/admin/branches" className="card flex items-center gap-4 hover:border-slate-300">
+        <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
+          <LuMapPin size={20} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="section-title">Filiallar va QR kodlar</p>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Filial qo'shish, joylashuvini belgilash, ruxsat etilgan masofa va qog'ozga chiqariladigan QR kod
+          </p>
+        </div>
+        <LuChevronRight size={18} className="text-slate-400 flex-shrink-0" />
+      </Link>
 
       <KioskLoginSettings />
 
       {/* Env info */}
       <div className="card border-emerald-200 bg-emerald-50/50">
         <h2 className="section-title mb-3">
-          <LuDatabase size={16} className="text-emerald-600" />
+          <LuDatabase size={16} className="text-emerald-700" />
           Supabase ulanish ma'lumotlari
         </h2>
         <div className="space-y-2 text-xs">
@@ -107,7 +122,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key`}
                 type="radio"
                 checked={!useWorkDays}
                 onChange={() => setUseWorkDays(false)}
-                className="text-emerald-500"
+                className="text-emerald-700"
               />
               <span className="text-sm text-dark-300">Kalendar kunlari</span>
             </label>
@@ -116,7 +131,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key`}
                 type="radio"
                 checked={useWorkDays}
                 onChange={() => setUseWorkDays(true)}
-                className="text-emerald-500"
+                className="text-emerald-700"
               />
               <span className="text-sm text-dark-300">Ish kunlari</span>
             </label>

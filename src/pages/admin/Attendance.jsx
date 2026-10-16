@@ -9,6 +9,7 @@ import {
 } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import * as XLSX from 'xlsx'
+import { useBranch } from '../../context/BranchContext'
 
 const STATUS_CONFIG = {
   open:      { label: 'Davom etmoqda', cls: 'badge-yellow' },
@@ -17,6 +18,7 @@ const STATUS_CONFIG = {
 }
 
 export default function AdminAttendance() {
+  const { matchEmployee } = useBranch()
   const { user } = useAuth()
   const [sessions, setSessions]     = useState([])
   const [employees, setEmployees]   = useState([])
@@ -46,14 +48,14 @@ export default function AdminAttendance() {
         }),
         employeeFunctions.getAll(),
       ])
-      setSessions(sess)
-      setEmployees(emps)
+      setSessions(sess.filter(s => matchEmployee(s.employees)))
+      setEmployees(emps.filter(matchEmployee))
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [dateFrom, dateTo, empFilter, statusFilter])
+  }, [dateFrom, dateTo, empFilter, statusFilter, matchEmployee])
 
   useEffect(() => { load() }, [load])
 
@@ -138,7 +140,7 @@ export default function AdminAttendance() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <LuClock size={20} className="text-emerald-600" />
+            <LuClock size={20} className="text-emerald-700" />
             Davomat
           </h1>
           <p className="page-subtitle">{filtered.length} ta yozuv</p>
@@ -164,7 +166,7 @@ export default function AdminAttendance() {
         </div>
         <div className="stat-card">
           <p className="text-xs text-dark-500">Jami ish haqi</p>
-          <p className="text-sm font-bold text-emerald-400">{formatMoney(totalEarned)}</p>
+          <p className="text-sm font-bold text-emerald-700">{formatMoney(totalEarned)}</p>
         </div>
         <div className="stat-card">
           <p className="text-xs text-dark-500">Hozir ishlayotgan</p>
@@ -265,7 +267,7 @@ export default function AdminAttendance() {
                     <td className="table-cell hidden md:table-cell text-xs">
                       {formatDuration(sess.worked_seconds)}
                     </td>
-                    <td className="table-cell hidden lg:table-cell text-emerald-400 font-medium text-xs">
+                    <td className="table-cell hidden lg:table-cell text-emerald-700 font-medium text-xs">
                       {formatMoney(sess.earned_amount)}
                     </td>
                     <td className="table-cell">
@@ -378,7 +380,7 @@ export default function AdminAttendance() {
                 disabled={submitting || !editReason.trim()}
                 className="btn-primary disabled:opacity-50"
               >
-                {submitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {submitting && <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />}
                 <LuSave size={14} /> Saqlash
               </button>
             </div>

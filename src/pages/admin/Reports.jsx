@@ -11,6 +11,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend
 } from 'recharts'
 import * as XLSX from 'xlsx'
+import { useBranch } from '../../context/BranchContext'
 
 const REPORT_TYPES = [
   { value: 'attendance',  label: 'Kunlik davomat' },
@@ -25,9 +26,10 @@ const MONTHS = [
   'Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'
 ]
 
-const PIE_COLORS = ['#4f46e5', '#818cf8', '#c7d2fe', '#0284c7', '#8b5cf6']
+const PIE_COLORS = ['#FCA914', '#111111', '#FECB4D', '#9A5B00', '#94A3B8']
 
 export default function AdminReports() {
+  const { matchEmployee, branches: branchList } = useBranch()
   const now = new Date()
   const [reportType, setReportType] = useState('attendance')
   const [dateFrom, setDateFrom]     = useState(
@@ -62,10 +64,11 @@ export default function AdminReports() {
       } else if (reportType === 'trials') {
         result = await trialFunctions.getAll()
       } else if (reportType === 'branch') {
-        const emps = await employeeFunctions.getAll()
+        const emps = (await employeeFunctions.getAll()).filter(matchEmployee)
+        const branchNames = Object.fromEntries(branchList.map(b => [b.id, b.name]))
         const branches = {}
         for (const emp of emps) {
-          const b = emp.branch || 'Noma\'lum'
+          const b = branchNames[emp.branch_id] || emp.branch || 'Noma\'lum'
           if (!branches[b]) branches[b] = { name: b, total: 0, active: 0, trial: 0 }
           branches[b].total++
           if (emp.status === 'active') branches[b].active++
@@ -74,6 +77,8 @@ export default function AdminReports() {
         result = Object.values(branches)
       }
 
+      // Admin panel tepasida tanlangan filial bo'yicha
+      if (reportType !== 'branch') result = result.filter(r => matchEmployee(r.employees))
       setData(result)
       setGenerated(true)
     } catch (err) {
@@ -81,7 +86,7 @@ export default function AdminReports() {
     } finally {
       setLoading(false)
     }
-  }, [reportType, dateFrom, dateTo, year, month])
+  }, [reportType, dateFrom, dateTo, year, month, matchEmployee, branchList])
 
   const exportExcel = () => {
     if (!data.length) return
@@ -162,7 +167,7 @@ export default function AdminReports() {
                 <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis hide />
                 <Tooltip />
-                <Bar dataKey="active" name="Faol"     fill="#818cf8" radius={[4,4,0,0]} maxBarSize={28} />
+                <Bar dataKey="active" name="Faol"     fill="#111111" radius={[4,4,0,0]} maxBarSize={28} />
                 <Bar dataKey="trial"  name="Test"     fill="#f59e0b" radius={[4,4,0,0]} maxBarSize={28} />
               </BarChart>
             </ResponsiveContainer>
@@ -181,7 +186,7 @@ export default function AdminReports() {
               <XAxis dataKey={d => d.employees?.full_name || '?'} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis hide />
               <Tooltip formatter={v => formatMoney(v)} />
-              <Bar dataKey="total_earned"   name="Ish haqi"    fill="#818cf8" radius={[4,4,0,0]} maxBarSize={24} />
+              <Bar dataKey="total_earned"   name="Ish haqi"    fill="#111111" radius={[4,4,0,0]} maxBarSize={24} />
               <Bar dataKey="total_advances" name="Avanslar"   fill="#8b5cf6" radius={[4,4,0,0]} maxBarSize={24} />
               <Bar dataKey="net_payable"    name="To'lanadigan" fill="#f59e0b" radius={[4,4,0,0]} maxBarSize={24} />
             </BarChart>
@@ -198,7 +203,7 @@ export default function AdminReports() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <FiBarChart2 size={20} className="text-emerald-600" />
+            <FiBarChart2 size={20} className="text-emerald-700" />
             Hisobotlar
           </h1>
         </div>
@@ -267,7 +272,7 @@ export default function AdminReports() {
           className="btn-primary self-start"
         >
           {loading ? (
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
           ) : <FiBarChart2 size={14} />}
           Hisobot yaratish
         </button>
@@ -345,7 +350,7 @@ export default function AdminReports() {
                           <td className="table-cell font-medium text-dark-200">{row.employees?.full_name}</td>
                           <td className="table-cell text-xs text-dark-400">{formatTashkentDateTime(row.check_in_at)}</td>
                           <td className="table-cell hidden md:table-cell text-xs text-dark-400">{formatDuration(row.worked_seconds)}</td>
-                          <td className="table-cell text-emerald-400 font-medium">{formatMoney(row.earned_amount)}</td>
+                          <td className="table-cell text-emerald-700 font-medium">{formatMoney(row.earned_amount)}</td>
                           <td className="table-cell hidden md:table-cell">
                             <span className={row.status === 'open' ? 'badge-yellow' : 'badge-green'}>
                               {row.status === 'open' ? 'Ochiq' : 'Yopilgan'}
@@ -357,7 +362,7 @@ export default function AdminReports() {
                         <>
                           <td className="table-cell font-medium text-dark-200">{row.employees?.full_name}</td>
                           <td className="table-cell text-dark-400">{row.worked_days} kun</td>
-                          <td className="table-cell text-emerald-400">{formatMoney(row.total_earned)}</td>
+                          <td className="table-cell text-emerald-700">{formatMoney(row.total_earned)}</td>
                           <td className="table-cell hidden md:table-cell text-purple-400">{formatMoney(row.total_advances)}</td>
                           <td className="table-cell text-amber-400 font-bold">{formatMoney(row.net_payable)}</td>
                         </>
@@ -394,7 +399,7 @@ export default function AdminReports() {
                         <>
                           <td className="table-cell font-medium text-dark-200">{row.name}</td>
                           <td className="table-cell text-dark-300">{row.total}</td>
-                          <td className="table-cell text-emerald-400">{row.active}</td>
+                          <td className="table-cell text-emerald-700">{row.active}</td>
                           <td className="table-cell text-amber-400">{row.trial}</td>
                         </>
                       )}

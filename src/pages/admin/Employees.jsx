@@ -8,6 +8,7 @@ import {
   scheduleFunctions, createSecondaryAuthClient, formatTashkentDate, formatMoney
 } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useBranch } from '../../context/BranchContext'
 
 const STATUS_LABELS = {
   trial:    { label: 'Sinovda',     cls: 'badge-yellow' },
@@ -43,7 +44,7 @@ function calculateShiftHours(start, end) {
 
 const EMPTY_FORM = {
   full_name: '', phone: '', telegram_id: '', position: '',
-  branch: 'Asosiy', hire_date: new Date().toISOString().split('T')[0],
+  branch: 'Asosiy', branch_id: '', hire_date: new Date().toISOString().split('T')[0],
   hourly_rate: '',
   schedule_mode: 'different', // 'same' | 'different'
   // Du, Chor, Juma uchun:
@@ -62,6 +63,11 @@ const EMPTY_FORM = {
 }
 
 export default function AdminEmployees() {
+  const { matchEmployee, branches: branchList, selectedId: selectedBranchId } = useBranch()
+  // Xodim filiali nomi (yangi filiallar jadvalidan, bo'lmasa eski matnli nom)
+  const branchName = (emp) => branchList.find(b => b.id === emp?.branch_id)?.name || emp?.branch || '—'
+  const findBranchId = (emp) =>
+    emp?.branch_id || branchList.find(b => b.name.trim().toLowerCase() === (emp?.branch || '').trim().toLowerCase())?.id || ''
   const { user } = useAuth()
   const [employees, setEmployees] = useState([])
   const [loading, setLoading]     = useState(true)
@@ -87,13 +93,13 @@ export default function AdminEmployees() {
     setLoading(true)
     try {
       const data = await employeeFunctions.getAll({})
-      setEmployees(data)
+      setEmployees(data.filter(matchEmployee))
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [matchEmployee])
 
   useEffect(() => { load() }, [load])
 
@@ -107,7 +113,9 @@ export default function AdminEmployees() {
 
   const openAdd = () => {
     setEditMode(false)
-    setForm(EMPTY_FORM)
+    // Tepada filial tanlangan bo'lsa — yangi xodim shu filialga qo'shiladi
+    const preset = branchList.find(b => b.id === selectedBranchId) || branchList.find(b => b.is_active) || null
+    setForm({ ...EMPTY_FORM, branch_id: preset?.id || '', branch: preset?.name || EMPTY_FORM.branch })
     setFormError('')
     setShowModal(true)
   }
@@ -142,6 +150,7 @@ export default function AdminEmployees() {
       telegram_id: emp.telegram_id || '',
       position:    emp.position || '',
       branch:      emp.branch || 'Asosiy',
+      branch_id:   findBranchId(emp),
       hire_date:   emp.hire_date || '',
       hourly_rate: currentRate?.hourly_rate || '',
       schedule_mode: hasDifferent ? 'different' : 'same',
@@ -228,6 +237,7 @@ export default function AdminEmployees() {
           telegram_id: form.telegram_id,
           position:    form.position,
           branch:      form.branch,
+          branch_id:   form.branch_id || null,
           hire_date:   form.hire_date,
           status:      form.is_trial ? 'trial' : (selectedEmployee.status === 'trial' ? 'active' : selectedEmployee.status),
           notes:       notesMetadata,
@@ -284,6 +294,7 @@ export default function AdminEmployees() {
           telegram_id:  form.telegram_id,
           position:     form.position,
           branch:       form.branch,
+          branch_id:    form.branch_id || null,
           hire_date:    form.hire_date,
           status:       isTrial ? 'trial' : 'active',
           confirmed_at: isTrial ? null : new Date().toISOString(),
@@ -461,7 +472,7 @@ export default function AdminEmployees() {
                       </td>
                       <td className="table-cell">
                         <p className="text-slate-900">{emp.position || '—'}</p>
-                        <p className="text-xs text-slate-500">{emp.branch}</p>
+                        <p className="text-xs text-slate-500">{branchName(emp)}</p>
                       </td>
                       <td className="table-cell hidden xl:table-cell">
                         <ScheduleShort schedules={emp.work_schedules} />
@@ -553,9 +564,24 @@ export default function AdminEmployees() {
                     <InputField label="Lavozim" value={form.position} onChange={v => setForm({...form, position: v})} placeholder="Oshpaz, kassir..." required />
                     <div>
                       <label className="label">Filial</label>
-                      <select value={form.branch} onChange={e => setForm({...form, branch: e.target.value})} className="input-field">
-                        {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
-                      </select>
+                      {branchList.length > 0 ? (
+                        <select
+                          value={form.branch_id}
+                          onChange={e => {
+                            const b = branchList.find(x => x.id === e.target.value)
+                            setForm({ ...form, branch_id: e.target.value, branch: b?.name || form.branch })
+                          }}
+                          className="input-field"
+                        >
+                          <option value="">Filial tanlanmagan</option>
+                          {branchList.map(b => <option key={b.id} value={b.id}>{b.name}{!b.is_active && " (o'chirilgan)"}</option>)}
+                        </select>
+                      ) : (
+                        // Filiallar hali qo'shilmagan — eski ro'yxat
+                        <select value={form.branch} onChange={e => setForm({...form, branch: e.target.value})} className="input-field">
+                          {BRANCHES.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                      )}
                     </div>
                     <InputField label="Ishga kirgan sana" value={form.hire_date} onChange={v => setForm({...form, hire_date: v})} type="date" required />
                     <InputField label="Bir soatlik maosh (so'm)" value={form.hourly_rate} onChange={v => setForm({...form, hourly_rate: v})} type="number" placeholder="25000" />
@@ -676,7 +702,7 @@ export default function AdminEmployees() {
               <button onClick={() => setShowModal(false)} className="btn-secondary">Bekor qilish</button>
               <button id="save-employee-btn" onClick={handleSubmit} disabled={submitting} className="btn-primary flex-1">
                 {submitting
-                  ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ? <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />
                   : <LuSave size={16} />}
                 {editMode ? "O'zgarishlarni saqlash" : "Xodimni qo'shish"}
               </button>
@@ -703,7 +729,7 @@ export default function AdminEmployees() {
                     <Avatar name={emp.full_name} size="lg" />
                     <div className="min-w-0">
                       <p className="text-lg font-semibold text-slate-900">{emp.full_name}</p>
-                      <p className="text-sm text-slate-500">{emp.position} · {emp.branch}</p>
+                      <p className="text-sm text-slate-500">{emp.position} · {branchName(emp)}</p>
                       <div className="mt-1.5"><StatusBadge emp={emp} /></div>
                     </div>
                   </div>
@@ -833,7 +859,7 @@ export default function AdminEmployees() {
                     <Avatar name={emp.full_name} size="lg" />
                     <div className="min-w-0">
                       <p className="text-lg font-semibold text-slate-900">{emp.full_name}</p>
-                      <p className="text-sm text-slate-500">{emp.position} · {emp.branch}</p>
+                      <p className="text-sm text-slate-500">{emp.position} · {branchName(emp)}</p>
                     </div>
                   </div>
 
@@ -912,7 +938,7 @@ export default function AdminEmployees() {
               <div className="px-6 py-4 border-t border-slate-200 flex gap-2 flex-shrink-0">
                 <button onClick={() => setAction(null)} disabled={actionBusy} className="btn-secondary">Bekor qilish</button>
                 <button onClick={submitAction} disabled={actionBusy} className={`${cfg.btnCls} flex-1`}>
-                  {actionBusy && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  {actionBusy && <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />}
                   {cfg.btn}
                 </button>
               </div>

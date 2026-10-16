@@ -14,14 +14,14 @@ import {
 const NOTIF_ICONS = {
   trial_ending:    <LuTriangleAlert size={14} className="text-amber-500" />,
   trial_ended:     <LuTriangleAlert size={14} className="text-red-500" />,
-  checkin:         <LuClock size={14} className="text-emerald-600" />,
+  checkin:         <LuClock size={14} className="text-emerald-700" />,
   checkout:        <LuClock size={14} className="text-teal-600" />,
   trial_result:    <LuUserCheck size={14} className="text-blue-500" />,
-  advance_added:   <LuDollarSign size={14} className="text-emerald-600" />,
+  advance_added:   <LuDollarSign size={14} className="text-emerald-700" />,
   payroll_ready:   <LuDollarSign size={14} className="text-green-600" />,
   late:            <LuTriangleAlert size={14} className="text-orange-500" />,
   forgot_checkout: <LuClock size={14} className="text-red-500" />,
-  device_request:  <LuSmartphone size={14} className="text-emerald-600" />,
+  device_request:  <LuSmartphone size={14} className="text-emerald-700" />,
 }
 
 export default function NotificationBell() {
@@ -74,7 +74,7 @@ export default function NotificationBell() {
           <div className="absolute right-0 top-full mt-2 w-84 sm:w-96 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in">
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-emerald-50/40">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <LuBell size={15} className="text-emerald-600" />
+                <LuBell size={15} className="text-emerald-700" />
                 Bildirishnomalar
                 {unreadCount > 0 && (
                   <span className="bg-red-50 text-red-600 border border-red-200 text-xs font-bold px-2 py-0.5 rounded-full">

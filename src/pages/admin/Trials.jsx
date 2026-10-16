@@ -7,6 +7,7 @@ import {
 } from "react-icons/lu"
 import { trialFunctions, employeeFunctions, formatTashkentDate } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useBranch } from '../../context/BranchContext'
 
 const STATUS_CONFIG = {
   in_progress:       { label: 'Test davom etmoqda', cls: 'badge-yellow', icon: <LuClock size={12} /> },
@@ -18,6 +19,7 @@ const STATUS_CONFIG = {
 }
 
 export default function AdminTrials() {
+  const { matchEmployee } = useBranch()
   const { user } = useAuth()
   const [trials, setTrials]   = useState([])
   const [employees, setEmployees] = useState([])
@@ -43,14 +45,14 @@ export default function AdminTrials() {
         trialFunctions.getAll(),
         employeeFunctions.getAll(),
       ])
-      setTrials(trialsData)
-      setEmployees(empsData)
+      setTrials(trialsData.filter(t => matchEmployee(t.employees)))
+      setEmployees(empsData.filter(matchEmployee))
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [matchEmployee])
 
   useEffect(() => { load() }, [load])
 
@@ -139,7 +141,7 @@ export default function AdminTrials() {
         </div>
         <div className="stat-card">
           <p className="text-xs text-dark-500">Tasdiqlangan</p>
-          <p className="text-2xl font-bold text-emerald-400">{confirmedCount}</p>
+          <p className="text-2xl font-bold text-emerald-700">{confirmedCount}</p>
         </div>
         <div className="stat-card">
           <p className="text-xs text-dark-500">Rad etilgan</p>
@@ -162,7 +164,7 @@ export default function AdminTrials() {
             onClick={() => setFilter(opt.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
               filter === opt.value
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20'
                 : 'bg-dark-800 text-dark-400 border border-dark-700 hover:border-dark-600'
             }`}
           >
@@ -250,7 +252,7 @@ export default function AdminTrials() {
                       <button
                         id={`approve-trial-${trial.id}`}
                         onClick={() => openDecision(trial, 'approve')}
-                        className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-xs flex items-center gap-1"
+                        className="px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all text-xs flex items-center gap-1"
                       >
                         <LuCircleCheck size={12} /> Tasdiqlash
                       </button>
@@ -287,7 +289,7 @@ export default function AdminTrials() {
               <h2 className="text-base font-semibold text-slate-900">
                 {decisionType === 'approve' ? <span className="flex items-center gap-2"><LuCircleCheck size={18} className="text-green-600" /> Ishga qabul qilish</span> :
                  decisionType === 'reject'  ? <span className="flex items-center gap-2"><LuCircleX size={18} className="text-red-600" /> Rad etish</span> :
-                                              <span className="flex items-center gap-2"><LuCalendarPlus size={18} className="text-emerald-600" /> Sinov muddatini uzaytirish</span>}
+                                              <span className="flex items-center gap-2"><LuCalendarPlus size={18} className="text-emerald-700" /> Sinov muddatini uzaytirish</span>}
               </h2>
               <button onClick={() => setDecisionModal(false)} className="text-dark-500 hover:text-dark-300">
                 <LuX size={18} />
@@ -337,12 +339,12 @@ export default function AdminTrials() {
                 onClick={handleDecision}
                 disabled={submitting || (decisionType === 'extend' && !extendDate)}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-sm transition-all disabled:opacity-50 ${
-                  decisionType === 'approve' ? 'bg-emerald-500 hover:bg-emerald-400 text-white' :
-                  decisionType === 'reject'  ? 'bg-red-500 hover:bg-red-400 text-white' :
-                                               'bg-blue-500 hover:bg-blue-400 text-white'
+                  decisionType === 'approve' ? 'bg-emerald-500 hover:bg-emerald-400 text-slate-950' :
+                  decisionType === 'reject'  ? 'bg-red-500 hover:bg-red-400 text-slate-950' :
+                                               'bg-blue-500 hover:bg-blue-400 text-slate-950'
                 }`}
               >
-                {submitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {submitting && <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />}
                 Tasdiqlash
               </button>
             </div>
@@ -438,7 +440,7 @@ export default function AdminTrials() {
                 disabled={submitting || !assignForm.employee_id}
                 className="btn-primary"
               >
-                {submitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {submitting && <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />}
                 Tayinlash
               </button>
             </div>

@@ -3,8 +3,10 @@ import { LuCreditCard, LuRefreshCw, LuDownload } from "react-icons/lu"
 import { payrollFunctions, formatMoney, formatTashkentDateTime } from '../../lib/supabase'
 import * as XLSX from 'xlsx'
 import PaymentMethod from '../../components/admin/PaymentMethod'
+import { useBranch } from '../../context/BranchContext'
 
 export default function AdminPayments() {
+  const { matchEmployee } = useBranch()
   const [payments, setPayments] = useState([])
   const [loading, setLoading]   = useState(true)
   const [dateFrom, setDateFrom] = useState(
@@ -19,13 +21,13 @@ export default function AdminPayments() {
         from: dateFrom ? `${dateFrom}T00:00:00` : undefined,
         to:   dateTo   ? `${dateTo}T23:59:59`   : undefined,
       })
-      setPayments(data)
+      setPayments(data.filter(p => matchEmployee(p.employees)))
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [dateFrom, dateTo])
+  }, [dateFrom, dateTo, matchEmployee])
 
   useEffect(() => { load() }, [load])
 
@@ -50,7 +52,7 @@ export default function AdminPayments() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <LuCreditCard size={20} className="text-emerald-600" />
+            <LuCreditCard size={20} className="text-emerald-700" />
             To'lovlar tarixi
           </h1>
           <p className="page-subtitle">{payments.length} ta to'lov</p>

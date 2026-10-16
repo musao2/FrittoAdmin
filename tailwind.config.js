@@ -7,18 +7,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Asosiy brend rangi (FRITTO indigo). Kodda "emerald-*" nomi bilan ishlatiladi.
+        // FRITTO brend rangi (sariq #FCA914). Kodda "emerald-*" nomi bilan ishlatiladi:
+        //   600 — tugma foni (ustida qora yozuv), 700/800 — matn va ikonkalar (oq fonda yaxshi o'qiladi)
         emerald: {
-          50:  '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
+          50:  '#FFF8E6',
+          100: '#FFEFC2',
+          200: '#FFDF8A',
+          300: '#FECB4D',
+          400: '#FDB92A',
+          500: '#FCA914',
+          600: '#FCA914',
+          700: '#9A5B00',
+          800: '#7A4800',
+          900: '#5C3600',
         },
         brand: {
           50:  '#f0fdf4',
@@ -57,7 +58,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        heading: ['Inter', 'system-ui', 'sans-serif'],
+        heading: ['"Space Grotesk"', 'Inter', 'system-ui', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-in-out',

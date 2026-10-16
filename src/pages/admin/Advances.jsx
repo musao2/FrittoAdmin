@@ -9,8 +9,10 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import * as XLSX from 'xlsx'
 import PaymentMethod from '../../components/admin/PaymentMethod'
+import { useBranch } from '../../context/BranchContext'
 
 export default function AdminAdvances() {
+  const { matchEmployee } = useBranch()
   const { user } = useAuth()
   const [advances, setAdvances]   = useState([])
   const [employees, setEmployees] = useState([])
@@ -33,14 +35,14 @@ export default function AdminAdvances() {
         advanceFunctions.getAll(empFilter ? { employeeId: empFilter } : {}),
         employeeFunctions.getAll({ status: 'active' }),
       ])
-      setAdvances(advs)
-      setEmployees(emps)
+      setAdvances(advs.filter(a => matchEmployee(a.employees)))
+      setEmployees(emps.filter(matchEmployee))
     } catch (err) {
       console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [empFilter])
+  }, [empFilter, matchEmployee])
 
   useEffect(() => { load() }, [load])
 
@@ -110,7 +112,7 @@ export default function AdminAdvances() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <LuWallet size={20} className="text-emerald-600" />
+            <LuWallet size={20} className="text-emerald-700" />
             Avanslar
           </h1>
           <p className="page-subtitle">{advances.length} ta avans yozuvi</p>
@@ -297,7 +299,7 @@ export default function AdminAdvances() {
             <div className="flex justify-end gap-2 px-5 pb-5">
               <button onClick={() => setShowModal(false)} className="btn-secondary">Bekor qilish</button>
               <button onClick={handleSubmit} disabled={submitting} className="btn-primary disabled:opacity-50">
-                {submitting && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {submitting && <div className="w-4 h-4 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin" />}
                 <LuWallet size={14} /> Saqlash
               </button>
             </div>

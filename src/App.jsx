@@ -20,6 +20,9 @@ import AdminPayments     from './pages/admin/Payments'
 import AdminReports      from './pages/admin/Reports'
 import AdminSettings     from './pages/admin/Settings'
 import AdminDevices      from './pages/admin/Devices'
+import AdminBranches     from './pages/admin/Branches'
+import BranchPrint       from './pages/admin/BranchPrint'
+import { BranchProvider } from './context/BranchContext'
 
 function AppRoutes() {
   const { user, profile, loading } = useAuth()
@@ -51,7 +54,9 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/admin" element={<AdminLayout />}>
+      {/* QR plakatni chop etish — menyusiz, toza sahifa */}
+      <Route path="/admin/branches/:id/print" element={<BranchPrint />} />
+      <Route path="/admin" element={<BranchProvider><AdminLayout /></BranchProvider>}>
         <Route index element={<AdminDashboard />} />
         <Route path="employees"  element={<AdminEmployees />} />
         <Route path="trials"     element={<AdminTrials />} />
@@ -63,6 +68,7 @@ function AppRoutes() {
         <Route path="reports"    element={<AdminReports />} />
         <Route path="settings"   element={<AdminSettings />} />
         <Route path="devices"    element={<AdminDevices />} />
+        <Route path="branches"   element={<AdminBranches />} />
       </Route>
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>

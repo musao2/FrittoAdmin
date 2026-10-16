@@ -361,27 +361,33 @@ export const employeeFunctions = {
     return data
   },
 
-  async getDashboardStats() {
-    const { data: employees, error } = await supabase
+  // match — admin paneldagi filial filtri (xodim shu filialga tegishlimi?)
+  async getDashboardStats(match = () => true) {
+    const { data: allEmployees, error } = await supabase
       .from('employees')
-      .select('id, status')
+      .select('id, status, branch, branch_id')
     if (error) throw error
+    const employees = (allEmployees || []).filter(match)
+    const ids = new Set(employees.map(e => e.id))
 
     const total   = employees.length
     const active  = employees.filter(e => e.status === 'active').length
     const inactive = employees.filter(e => e.status === 'inactive').length
 
-    const { data: trials } = await supabase
+    const { data: allTrials } = await supabase
       .from('employment_trials')
-      .select('id, status')
+      .select('id, status, employee_id')
       .in('status', ['pending', 'in_progress', 'awaiting_decision'])
+    const trials = (allTrials || []).filter(t => ids.has(t.employee_id))
 
-    const { data: todaySessions } = await supabase
+    const { data: allToday } = await supabase
       .from('attendance_sessions')
-      .select('id, status, check_in_at')
+      .select('id, status, check_in_at, employee_id')
       .gte('check_in_at', new Date().toISOString().split('T')[0])
+    const todaySessions = (allToday || []).filter(s => ids.has(s.employee_id))
 
     return {
+      employeeIds: [...ids],
       total,
       active,
       inactive,
@@ -429,7 +435,7 @@ export const trialFunctions = {
   async getAll() {
     const { data, error } = await supabase
       .from('employment_trials')
-      .select('*, employees(id, full_name, position, branch)')
+      .select('*, employees(id, full_name, position, branch, branch_id)')
       .order('created_at', { ascending: false })
     if (error) throw error
     return data || []
@@ -699,7 +705,7 @@ export const attendanceFunctions = {
       .from('attendance_sessions')
       .select(`
         *,
-        employees(id, full_name, position, branch)
+        employees(id, full_name, position, branch, branch_id)
       `)
       .order('check_in_at', { ascending: false })
 
@@ -850,7 +856,7 @@ export const advanceFunctions = {
   async getAll(filters = {}) {
     let query = supabase
       .from('advances')
-      .select('*, employees(id, full_name, branch)')
+      .select('*, employees(id, full_name, branch, branch_id)')
       .order('created_at', { ascending: false })
 
     if (filters.employeeId) query = query.eq('employee_id', filters.employeeId)
@@ -942,7 +948,7 @@ export const payrollFunctions = {
 
     let query = supabase
       .from('payroll_items')
-      .select('*, employees(id, full_name, position, branch), payments(id, amount, payment_method, payment_date)')
+      .select('*, employees(id, full_name, position, branch, branch_id), payments(id, amount, payment_method, payment_date)')
       .eq('period_id', periodId)
       .order('created_at', { ascending: false })
 
@@ -1153,7 +1159,7 @@ export const payrollFunctions = {
   async getPayments(filters = {}) {
     let query = supabase
       .from('payments')
-      .select('*, employees(id, full_name)')
+      .select('*, employees(id, full_name, branch, branch_id)')
       .order('payment_date', { ascending: false })
 
     if (filters.employeeId) query = query.eq('employee_id', filters.employeeId)
