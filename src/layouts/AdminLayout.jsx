@@ -21,6 +21,7 @@ import NotificationBell from '../components/admin/NotificationBell'
 import { supabase } from '../lib/supabase'
 import Logo from '../components/Logo'
 import BranchSwitcher from '../components/admin/BranchSwitcher'
+import { cleanupExpiredPhotos } from '../lib/photoRetention'
 
 // Menyu guruhlari — har bir bo'lim oddiy, tushunarli nom bilan
 const NAV_GROUPS = [
@@ -62,6 +63,12 @@ export default function AdminLayout() {
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [badges, setBadges] = useState({})
+
+  // 40 kundan eski davomat rasmlarini o'chirish (kuniga bir marta, orqa fonda)
+  useEffect(() => {
+    const id = setTimeout(() => { cleanupExpiredPhotos() }, 5000)
+    return () => clearTimeout(id)
+  }, [])
 
   // Kutilayotgan kirish so'rovlari soni (menyuda qizil raqam)
   useEffect(() => {

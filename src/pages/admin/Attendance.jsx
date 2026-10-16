@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../context/AuthContext'
 import * as XLSX from 'xlsx'
 import { useBranch } from '../../context/BranchContext'
+import { usePhotoUrls, PhotoCell, PhotoViewer } from '../../components/admin/AttendancePhotos'
 
 const STATUS_CONFIG = {
   open:      { label: 'Davom etmoqda', cls: 'badge-yellow' },
@@ -21,6 +22,7 @@ export default function AdminAttendance() {
   const { matchEmployee } = useBranch()
   const { user } = useAuth()
   const [sessions, setSessions]     = useState([])
+  const [photo, setPhoto]           = useState(null)
   const [employees, setEmployees]   = useState([])
   const [loading, setLoading]       = useState(true)
   const [search, setSearch]         = useState('')
@@ -63,6 +65,7 @@ export default function AdminAttendance() {
     !search ||
     sess.employees?.full_name?.toLowerCase().includes(search.toLowerCase())
   )
+  const photoUrls = usePhotoUrls(filtered)
 
   const openEdit = (sess) => {
     setEditSession(sess)
@@ -238,6 +241,7 @@ export default function AdminAttendance() {
             <thead>
               <tr>
                 <th className="table-head">Xodim</th>
+                <th className="table-head">Rasm</th>
                 <th className="table-head">Keldi</th>
                 <th className="table-head">Ketdi</th>
                 <th className="table-head hidden md:table-cell">Ishlangan</th>
@@ -257,6 +261,7 @@ export default function AdminAttendance() {
                         <p className="text-xs text-dark-500">{sess.employees?.branch}</p>
                       </div>
                     </td>
+                    <td className="table-cell"><PhotoCell session={sess} urls={photoUrls} onOpen={setPhoto} /></td>
                     <td className="table-cell text-xs">{formatTashkentDateTime(sess.check_in_at)}</td>
                     <td className="table-cell text-xs">
                       {sess.check_out_at
@@ -387,6 +392,7 @@ export default function AdminAttendance() {
           </div>
         </div>
       )}
+      <PhotoViewer photo={photo} onClose={() => setPhoto(null)} />
     </div>
   )
 }
