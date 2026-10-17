@@ -5,10 +5,11 @@ import {
 } from 'react-icons/lu'
 import {
   employeeFunctions, trialFunctions, salaryRateFunctions,
-  scheduleFunctions, createSecondaryAuthClient, formatTashkentDate, formatMoney
+  scheduleFunctions, createSecondaryAuthClient, formatTashkentDate, formatMoney, supabase
 } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useBranch } from '../../context/BranchContext'
+import EmployeeAccess from '../../components/admin/EmployeeAccess'
 
 const STATUS_LABELS = {
   trial:    { label: 'Sinovda',     cls: 'badge-yellow' },
@@ -56,7 +57,7 @@ const EMPTY_FORM = {
   // Bir xil vaqt uchun:
   shift_start: '09:00',
   shift_end: '18:00',
-  work_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+  work_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], // haftaning 7 kuni ish kuni
   // Ruxsat berilgan kechikish (daqiqa):
   allowed_late_minutes: 10,
   is_trial: false, trial_days: 5, notes: '', email: '', password: '',
@@ -160,7 +161,7 @@ export default function AdminEmployees() {
       odd_shift_end:    oddSched?.shift_end?.slice(0, 5) || '',
       shift_start:      firstSched?.shift_start?.slice(0, 5) || '09:00',
       shift_end:        firstSched?.shift_end?.slice(0, 5) || '18:00',
-      work_days:        firstSched?.work_days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      work_days:        firstSched?.work_days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
       allowed_late_minutes: lateMins,
       is_trial:    emp.status === 'trial',
       trial_days:  emp.employment_trials?.[0]?.days_count || 5,
@@ -192,7 +193,7 @@ export default function AdminEmployees() {
           shift_start: form.even_shift_start,
           shift_end:   form.even_shift_end || '00:00',
           branch:      branch,
-          work_days:   ['Mon', 'Wed', 'Fri'],
+          work_days:   ['Mon', 'Wed', 'Fri', 'Sun'],
         })
       }
       if (form.odd_shift_start) {
@@ -208,7 +209,7 @@ export default function AdminEmployees() {
         shift_start: form.shift_start || '09:00',
         shift_end:   form.shift_end || '18:00',
         branch:      branch,
-        work_days:   form.work_days || ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+        work_days:   form.work_days?.length ? form.work_days : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
       })
     }
     return list
@@ -300,6 +301,17 @@ export default function AdminEmployees() {
           confirmed_at: isTrial ? null : new Date().toISOString(),
           notes:        notesMetadata,
         })
+
+        // Parolning shifrlangan nusxasi — admin keyin "Ko'rsatish" bilan ko'ra oladi
+        if (newUserId) {
+          const { error: vaultErr } = await supabase.rpc('admin_store_password', {
+            p_user_id: newUserId,
+            p_password: form.password,
+          })
+          if (vaultErr && !(vaultErr.code === 'PGRST202' || vaultErr.message?.includes('Could not find the function'))) {
+            console.warn('Parol nusxasi saqlanmadi:', vaultErr.message)
+          }
+        }
 
         // Stavka belgilash
         if (form.hourly_rate) {
@@ -612,7 +624,7 @@ export default function AdminEmployees() {
                   {form.schedule_mode === 'different' ? (
                     <div className="space-y-3">
                       <TimeRange
-                        title="Dushanba, Chorshanba, Juma"
+                        title="Dushanba, Chorshanba, Juma, Yakshanba"
                         start={form.even_shift_start} end={form.even_shift_end}
                         onStart={v => setForm({ ...form, even_shift_start: v })}
                         onEnd={v => setForm({ ...form, even_shift_end: v })}
@@ -625,12 +637,40 @@ export default function AdminEmployees() {
                       />
                     </div>
                   ) : (
-                    <TimeRange
-                      title="Barcha ish kunlari"
-                      start={form.shift_start} end={form.shift_end}
-                      onStart={v => setForm({ ...form, shift_start: v })}
-                      onEnd={v => setForm({ ...form, shift_end: v })}
-                    />
+                    <div className="space-y-3">
+                      <TimeRange
+                        title="Barcha ish kunlari"
+                        start={form.shift_start} end={form.shift_end}
+                        onStart={v => setForm({ ...form, shift_start: v })}
+                        onEnd={v => setForm({ ...form, shift_end: v })}
+                      />
+                      <div>
+                        <label className="label">Ish kunlari</label>
+                        <div className="grid grid-cols-7 gap-1.5">
+                          {WEEK_DAYS.map(d => {
+                            const on = (form.work_days || []).includes(d.key)
+                            return (
+                              <button
+                                key={d.key} type="button" title={d.full}
+                                onClick={() => {
+                                  const cur = form.work_days || []
+                                  const next = on ? cur.filter(k => k !== d.key) : [...cur, d.key]
+                                  if (next.length) setForm({ ...form, work_days: WEEK_DAYS.map(w => w.key).filter(k => next.includes(k)) })
+                                }}
+                                className={`h-10 rounded-lg border text-sm transition-colors cursor-pointer ${
+                                  on ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-medium' : 'border-slate-300 text-slate-400 hover:bg-slate-50'
+                                }`}
+                              >
+                                {d.label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1.5">
+                          {(form.work_days || []).length === 7 ? "Haftaning 7 kuni ish kuni" : `${(form.work_days || []).length} kun ish, qolgani dam olish`}
+                        </p>
+                      </div>
+                    </div>
                   )}
 
                   <div>
@@ -748,6 +788,11 @@ export default function AdminEmployees() {
                       <InfoRow label="Doimiy qilingan" value={emp.confirmed_at ? formatTashkentDate(emp.confirmed_at) : '—'} />
                       <InfoRow label="Bir soatlik maosh" value={currentRate ? formatMoney(currentRate.hourly_rate) : '—'} />
                     </dl>
+                  </FormSection>
+
+                  {/* Tizimga kirish: email, parol, oxirgi kirish */}
+                  <FormSection title="Tizimga kirish">
+                    <EmployeeAccess key={emp.id} employee={emp} />
                   </FormSection>
 
                   {/* Ish vaqti */}
