@@ -8,7 +8,10 @@ import {
   LuTriangleAlert,
   LuUserCheck,
   LuDollarSign,
-  LuSmartphone
+  LuSmartphone,
+  LuUserPlus,
+  LuBanknote,
+  LuHandCoins,
 } from 'react-icons/lu'
 
 const NOTIF_ICONS = {
@@ -22,6 +25,11 @@ const NOTIF_ICONS = {
   late:            <LuTriangleAlert size={14} className="text-orange-500" />,
   forgot_checkout: <LuClock size={14} className="text-red-500" />,
   device_request:  <LuSmartphone size={14} className="text-emerald-700" />,
+  // Menejer harakatlari
+  manager_employee_added: <LuUserPlus size={14} className="text-blue-600" />,
+  manager_rate_set:       <LuDollarSign size={14} className="text-blue-600" />,
+  manager_payment:        <LuBanknote size={14} className="text-blue-600" />,
+  manager_advance:        <LuHandCoins size={14} className="text-blue-600" />,
 }
 
 export default function NotificationBell() {

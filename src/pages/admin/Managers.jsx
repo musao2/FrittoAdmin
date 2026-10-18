@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { LuUserPlus, LuBanknote, LuHandCoins, LuDollarSign, LuHistory } from 'react-icons/lu'
 import { LuUserCog, LuPlus, LuX, LuCopy, LuCheck, LuEye, LuKeyRound, LuTrash2, LuWandSparkles, LuCircleAlert, LuExternalLink } from 'react-icons/lu'
 import { supabase } from '../../lib/supabase'
 import { PasswordInput, credentialError, CREDENTIAL_ERRORS } from '../../components/admin/AdminAccountSettings'
@@ -143,6 +144,8 @@ export default function AdminManagers() {
           </table>
         </div>
       )}
+
+      <ManagerActivity />
 
       {adding && <AddManager onClose={() => setAdding(false)} onDone={load} />}
       {editing && <EditManager manager={editing} onClose={() => setEditing(null)} onDone={load} />}
@@ -358,5 +361,67 @@ function EditManager({ manager, onClose, onDone }) {
         )}
       </div>
     </Drawer>
+  )
+}
+
+const ACTIVITY = {
+  manager_employee_added: { icon: LuUserPlus,  label: "Xodim qo'shdi" },
+  manager_rate_set:       { icon: LuDollarSign, label: 'Maosh belgiladi' },
+  manager_payment:        { icon: LuBanknote,  label: 'Oylik berdi' },
+  manager_advance:        { icon: LuHandCoins, label: 'Avans berdi' },
+}
+
+// Menejerlar nima qilgani: xodim qo'shish, oylik va avans berish
+function ManagerActivity() {
+  const [rows, setRows] = useState(null)
+  const [filter, setFilter] = useState('all')
+
+  useEffect(() => {
+    supabase
+      .from('notifications')
+      .select('id, type, title, message, created_at')
+      .in('type', Object.keys(ACTIVITY))
+      .order('created_at', { ascending: false })
+      .limit(100)
+      .then(({ data }) => setRows(data || []))
+  }, [])
+
+  const list = (rows || []).filter(r => filter === 'all' || r.type === filter)
+
+  return (
+    <div className="card p-0 overflow-hidden">
+      <div className="flex items-center justify-between gap-3 flex-wrap px-5 py-4 border-b border-slate-100">
+        <h2 className="section-title flex items-center gap-2">
+          <LuHistory size={18} className="text-emerald-700" /> Menejerlar nima qildi
+        </h2>
+        <select value={filter} onChange={e => setFilter(e.target.value)} className="input-field w-auto h-9 text-sm">
+          <option value="all">Hammasi</option>
+          {Object.entries(ACTIVITY).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+      </div>
+      {rows === null ? (
+        <div className="h-32 animate-pulse bg-slate-50" />
+      ) : list.length === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-slate-500">Hali hech narsa qilinmagan</p>
+      ) : (
+        <div className="divide-y divide-slate-100 max-h-[480px] overflow-y-auto">
+          {list.map(r => {
+            const { icon: Icon, label } = ACTIVITY[r.type]
+            return (
+              <div key={r.id} className="flex items-start gap-3 px-5 py-3">
+                <span className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                  <Icon size={15} />
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-900">{label}</p>
+                  <p className="text-sm text-slate-600 break-words">{r.message}</p>
+                </div>
+                <span className="text-xs text-slate-400 whitespace-nowrap">{fmt(r.created_at)}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
