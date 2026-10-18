@@ -17,11 +17,26 @@ import {
   ResponsiveContainer, AreaChart, Area
 } from 'recharts'
 import {
-  employeeFunctions, attendanceFunctions, advanceFunctions,
-  payrollFunctions, formatMoney, formatTashkentDateTime
+  employeeFunctions, attendanceFunctions, formatMoney, formatTashkentDateTime, supabase
 } from '../../lib/supabase'
 import { useBranch } from '../../context/BranchContext'
 import { Link } from 'react-router-dom'
+
+const UZ_MONTHS = ['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr']
+const UZ_MONTHS_SHORT = ['Yan','Fev','Mar','Apr','May','Iyun','Iyul','Avg','Sen','Okt','Noy','Dek']
+const UZ_WEEKDAYS = ['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba']
+const pad2 = (n) => String(n).padStart(2, '0')
+
+// Supabase bir so'rovda ko'pi bilan 1000 qator beradi — hammasini sahifalab olamiz
+async function fetchAllRows(build, pageSize = 1000) {
+  const rows = []
+  for (let fromIdx = 0; ; fromIdx += pageSize) {
+    const { data, error } = await build().range(fromIdx, fromIdx + pageSize - 1)
+    if (error) throw error
+    rows.push(...(data || []))
+    if (!data || data.length < pageSize) return rows
+  }
+}
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
@@ -67,41 +82,48 @@ export default function AdminDashboard() {
       setTodaySessions(todaySess.filter(s => ids.has(s.employee_id)))
       setRecentSessions(recentSess.filter(s => matchEmployee(s.employees)))
 
-      // Oxirgi 6 oy ma'lumoti
+      // Oxirgi 6 oy: ish haqi (davomatdan + belgilangan oyliklar), avanslar, ishlagan xodimlar
       const months = []
       for (let i = 5; i >= 0; i--) {
         const d = new Date(thisYear, thisMonth - 1 - i, 1)
-        months.push({
-          year: d.getFullYear(),
-          month: d.getMonth() + 1,
-          name: d.toLocaleString('uz-UZ', { month: 'short' }),
-        })
+        months.push({ key: `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`, year: d.getFullYear(), month: d.getMonth() + 1, name: UZ_MONTHS_SHORT[d.getMonth()] })
       }
+      const from = `${months[0].key}-01T00:00:00+05:00`
+      const monthOf = (iso) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Tashkent' }).slice(0, 7)
 
-      const mData = await Promise.all(
-        months.map(async m => {
-          try {
-            const payroll = await payrollFunctions.getMonthlyPayroll(m.year, m.month)
-            const advances = await advanceFunctions.getAll({
-              year: m.year,
-              month: m.month,
-              status: 'approved'
-            })
-            const myPayroll = payroll.filter(p => ids.has(p.employee_id))
-            const myAdvances = advances.filter(a => matchEmployee(a.employees))
-            const totalEarned = myPayroll.reduce((acc, p) => acc + (p.earned_salary || 0), 0)
-            const totalAdv = myAdvances.reduce((acc, a) => acc + (a.amount || 0), 0)
-            return {
-              name: m.name,
-              earned: totalEarned,
-              advances: totalAdv,
-              workers: myPayroll.length,
-            }
-          } catch {
-            return { name: m.name, earned: 0, advances: 0, workers: 0 }
-          }
-        })
-      )
+      const [sess, advs, rates] = await Promise.all([
+        fetchAllRows(() => supabase.from('attendance_sessions')
+          .select('employee_id, check_in_at, earned_amount')
+          .in('status', ['closed', 'corrected'])
+          .gte('check_in_at', from)
+          .order('check_in_at')),
+        fetchAllRows(() => supabase.from('advances')
+          .select('employee_id, amount, created_at')
+          .eq('status', 'active')
+          .gte('created_at', from)
+          .order('created_at')),
+        supabase.from('salary_rates').select('*').then(r => r.data || []),
+      ])
+
+      const mData = months.map(m => {
+        const mySess = sess.filter(x => ids.has(x.employee_id) && monthOf(x.check_in_at) === m.key)
+        const myAdv  = advs.filter(x => ids.has(x.employee_id) && monthOf(x.created_at) === m.key)
+        // Belgilangan oylikdagi xodimlar: shu oyda amalda bo'lgan oylik summasi
+        const first = `${m.key}-01`
+        const last  = `${m.key}-${pad2(new Date(m.year, m.month, 0).getDate())}`
+        const monthly = rates.filter(r => r.salary_type === 'monthly' && ids.has(r.employee_id)
+          && r.effective_from <= last && (!r.effective_to || r.effective_to > first))
+        const monthlyByEmp = {}
+        monthly.forEach(r => { monthlyByEmp[r.employee_id] = Number(r.monthly_salary) || 0 })
+        const workers = new Set([...mySess.map(x => x.employee_id), ...Object.keys(monthlyByEmp)])
+        return {
+          name: m.name,
+          earned: mySess.reduce((t, x) => t + (Number(x.earned_amount) || 0), 0)
+            + Object.values(monthlyByEmp).reduce((t, v) => t + v, 0),
+          advances: myAdv.reduce((t, x) => t + (Number(x.amount) || 0), 0),
+          workers: workers.size,
+        }
+      })
 
       setMonthlyData(mData)
       setLastUpdated(new Date())
@@ -145,7 +167,7 @@ export default function AdminDashboard() {
         <div>
           <h1 className="page-title">Bosh sahifa</h1>
           <p className="page-subtitle capitalize">
-            {now.toLocaleDateString('uz-UZ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            {UZ_WEEKDAYS[now.getDay()]}, {now.getDate()}-{UZ_MONTHS[now.getMonth()]} {now.getFullYear()}
           </p>
         </div>
         <button
@@ -195,7 +217,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Bugun kelganlar"
-          value={todaySessions.length}
+          value={new Set(todaySessions.map(s => s.employee_id)).size}
           icon={<LuClock size={18} />}
           color="blue"
           link="/admin/attendance"
