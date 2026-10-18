@@ -261,7 +261,7 @@ export const employeeFunctions = {
           id, status, trial_start_date, trial_end_date,
           confirmed_date, decision, decision_date
         ),
-        salary_rates(id, hourly_rate, effective_from, effective_to),
+        salary_rates(*),
         work_schedules(id, shift_start, shift_end, branch, work_days, is_active)
       `)
       .order('created_at', { ascending: false })
@@ -804,7 +804,9 @@ export const salaryRateFunctions = {
     return data || []
   },
 
-  async set(employeeId, hourlyRate, effectiveFrom, adminId) {
+  // opts.monthlySalary berilsa — belgilangan oylik (soat hisoblanmaydi, hourly_rate = 0)
+  async set(employeeId, hourlyRate, effectiveFrom, adminId, opts = {}) {
+    const monthly = Number(opts.monthlySalary) > 0
     // Avvalgi aktiv stavkani yop
     await supabase
       .from('salary_rates')
@@ -816,9 +818,11 @@ export const salaryRateFunctions = {
       .from('salary_rates')
       .insert({
         employee_id: employeeId,
-        hourly_rate: hourlyRate,
+        hourly_rate: monthly ? 0 : hourlyRate,
         effective_from: effectiveFrom,
         created_by: adminId,
+        // eski bazada (017 ishga tushmagan) soatbay stavka ham saqlanaversin
+        ...(monthly ? { salary_type: 'monthly', monthly_salary: Number(opts.monthlySalary) } : {}),
       })
       .select()
       .single()
@@ -1013,7 +1017,21 @@ export const payrollFunctions = {
       .lte('check_in_at', periodEnd)
 
     const totalSeconds = (sessions || []).reduce((s, a) => s + (parseInt(a.worked_seconds) || 0), 0)
-    const totalEarned  = (sessions || []).reduce((s, a) => s + (parseFloat(a.earned_amount) || 0), 0)
+    let totalEarned    = (sessions || []).reduce((s, a) => s + (parseFloat(a.earned_amount) || 0), 0)
+
+    // Belgilangan oylik: soat hisoblanmaydi — shu oyda amalda bo'lgan oylik summasi olinadi
+    const { data: periodRate } = await supabase
+      .from('salary_rates')
+      .select('*')
+      .eq('employee_id', employeeId)
+      .lte('effective_from', periodEnd.slice(0, 10))
+      .or(`effective_to.is.null,effective_to.gt.${periodStart.slice(0, 10)}`)
+      .order('effective_from', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (periodRate?.salary_type === 'monthly') {
+      totalEarned = Number(periodRate.monthly_salary) || 0
+    }
     const workedDays   = new Set((sessions || []).map(s =>
       new Date(s.check_in_at).toDateString()
     )).size
@@ -1332,3 +1350,10 @@ export const adjustmentFunctions = {
 }
 
 export default supabase
+
+// Maosh stavkasi matni: "25 000 so'm/soat" yoki "5 000 000 so'm/oy"
+export const isMonthlyRate = (rate) => rate?.salary_type === 'monthly'
+export function formatRate(rate) {
+  if (!rate) return '—'
+  return isMonthlyRate(rate) ? `${formatMoney(rate.monthly_salary)}/oy` : `${formatMoney(rate.hourly_rate)}/soat`
+}

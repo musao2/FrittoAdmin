@@ -4,6 +4,7 @@ import { LuArrowLeft, LuChevronLeft, LuChevronRight, LuReceipt } from 'react-ico
 import {
   supabase, employeeFunctions, attendanceFunctions, payrollFunctions,
   formatMoney,
+  formatRate, isMonthlyRate,
 } from '../../lib/supabase'
 import SalaryBreakdown, { getRemaining } from '../../components/admin/SalaryBreakdown'
 import PaymentMethod from '../../components/admin/PaymentMethod'
@@ -152,7 +153,7 @@ export default function AdminPayrollEmployee() {
           <div className="min-w-0">
             <h1 className="page-title truncate">{emp?.full_name || (loading ? 'Yuklanmoqda...' : 'Xodim')}</h1>
             <p className="page-subtitle">
-              {[emp?.position, emp?.branch, rate && `soatiga ${formatMoney(rate.hourly_rate)}`].filter(Boolean).join(' · ')}
+              {[emp?.position, emp?.branch, rate && formatRate(rate)].filter(Boolean).join(' · ')}
             </p>
           </div>
         </div>
@@ -186,7 +187,11 @@ export default function AdminPayrollEmployee() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Stat label="Ishlagan kunlari" value={`${totals.days} kun`} hint={totals.absent ? `${totals.absent} kun kelmagan` : 'Kelmagan kuni yo\'q'} />
             <Stat label="Ishlagan soati" value={hoursText(totals.worked)} hint={totals.late ? `${totals.late} marta kechikkan` : 'Kechikmagan'} />
-            <Stat label="Ishlab topdi" value={formatMoney(item?.total_earned ?? totals.earned)} />
+            <Stat
+              label={isMonthlyRate(rate) ? 'Oylik maosh' : 'Ishlab topdi'}
+              value={formatMoney(item?.total_earned ?? (isMonthlyRate(rate) ? rate.monthly_salary : totals.earned))}
+              hint={isMonthlyRate(rate) ? 'Belgilangan, soat hisoblanmaydi' : undefined}
+            />
             <Stat
               label="Qoldi (berish kerak)"
               value={formatMoney(Math.max(0, getRemaining(item)))}

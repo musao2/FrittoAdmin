@@ -190,7 +190,7 @@ export default function AdminPayroll() {
           .order('payment_date', { ascending: false }),
         supabase
           .from('salary_rates')
-          .select('hourly_rate')
+          .select('*')
           .eq('employee_id', item.employee_id)
           .order('effective_from', { ascending: false })
           .limit(1)
@@ -214,6 +214,7 @@ export default function AdminPayroll() {
         adjustments: adjRes.data || [],
         payments: payRes.data || [],
         hourlyRate: rateRes.data?.hourly_rate || null,
+        monthlySalary: rateRes.data?.salary_type === 'monthly' ? Number(rateRes.data.monthly_salary) : null,
       })
     } catch (err) {
       console.error('Error fetching receipt data:', err)
@@ -254,7 +255,7 @@ export default function AdminPayroll() {
           .order('created_at', { ascending: false }),
         supabase
           .from('salary_rates')
-          .select('hourly_rate')
+          .select('*')
           .eq('employee_id', empId)
           .order('effective_from', { ascending: false })
           .limit(1)
@@ -267,6 +268,7 @@ export default function AdminPayroll() {
         advances: advRes.data || [],
         adjustments: adjRes.data || [],
         hourlyRate: rateRes.data?.hourly_rate || null,
+        monthlySalary: rateRes.data?.salary_type === 'monthly' ? Number(rateRes.data.monthly_salary) : null,
       })
     } catch (err) {
       console.error('Moliya tarixini olishda xatolik:', err)
@@ -955,11 +957,15 @@ export default function AdminPayroll() {
                       </span>
                     )}
                     {historyEmployee.role && <span>• {historyEmployee.role}</span>}
-                    {historyData.hourlyRate && (
+                    {historyData.monthlySalary ? (
+                      <span className="text-emerald-700 font-bold">
+                        • {formatMoney(historyData.monthlySalary)}/oy
+                      </span>
+                    ) : historyData.hourlyRate ? (
                       <span className="text-emerald-700 font-bold">
                         • {formatMoney(historyData.hourlyRate)}/soat
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>

@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   LuUsers, LuPlus, LuSearch, LuPencil, LuUserX, LuUserCheck,
-  LuX, LuSave, LuCircleAlert, LuEye, LuClipboardList, LuCircleCheck,
+  LuX, LuSave, LuCircleAlert, LuEye, LuEyeOff, LuClipboardList, LuCircleCheck,
 } from 'react-icons/lu'
 import {
   employeeFunctions, trialFunctions, salaryRateFunctions,
-  scheduleFunctions, createSecondaryAuthClient, formatTashkentDate, formatMoney, supabase
+  scheduleFunctions, createSecondaryAuthClient, formatTashkentDate, formatMoney, formatRate, isMonthlyRate, supabase
 } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import { useBranch } from '../../context/BranchContext'
@@ -46,7 +46,10 @@ function calculateShiftHours(start, end) {
 const EMPTY_FORM = {
   full_name: '', phone: '', telegram_id: '', position: '',
   branch: 'Asosiy', branch_id: '', hire_date: new Date().toISOString().split('T')[0],
+  salary_type: 'hourly', // 'hourly' — soatbay | 'monthly' — belgilangan oylik
+  show_salary: true,     // xodim ilovada oyligini ko'radimi
   hourly_rate: '',
+  monthly_salary: '',
   schedule_mode: 'different', // 'same' | 'different'
   // Du, Chor, Juma uchun:
   even_shift_start: '10:00',
@@ -153,7 +156,10 @@ export default function AdminEmployees() {
       branch:      emp.branch || 'Asosiy',
       branch_id:   findBranchId(emp),
       hire_date:   emp.hire_date || '',
-      hourly_rate: currentRate?.hourly_rate || '',
+      salary_type: currentRate?.salary_type === 'monthly' ? 'monthly' : 'hourly',
+      show_salary: emp.show_salary !== false,
+      hourly_rate: currentRate?.salary_type === 'monthly' ? '' : (currentRate?.hourly_rate || ''),
+      monthly_salary: currentRate?.salary_type === 'monthly' ? (currentRate.monthly_salary || '') : '',
       schedule_mode: hasDifferent ? 'different' : 'same',
       even_shift_start: evenSched?.shift_start?.slice(0, 5) || '10:00',
       even_shift_end:   evenSched?.shift_end?.slice(0, 5) || '14:00',
@@ -242,6 +248,8 @@ export default function AdminEmployees() {
           hire_date:   form.hire_date,
           status:      form.is_trial ? 'trial' : (selectedEmployee.status === 'trial' ? 'active' : selectedEmployee.status),
           notes:       notesMetadata,
+          // faqat o'zgarganda yuboramiz (020 hali ishga tushmagan bazada ham saqlash ishlasin)
+          ...(form.show_salary !== (selectedEmployee.show_salary !== false) ? { show_salary: form.show_salary } : {}),
         })
 
         // Test rejimi o'zgarishi
@@ -252,12 +260,13 @@ export default function AdminEmployees() {
         }
 
         // Stavkani yangilash
-        if (form.hourly_rate) {
+        if (form.salary_type === 'monthly' ? form.monthly_salary : form.hourly_rate) {
           await salaryRateFunctions.set(
             selectedEmployee.id,
-            parseFloat(form.hourly_rate),
+            parseFloat(form.hourly_rate) || 0,
             form.hire_date,
-            user.id
+            user.id,
+            { monthlySalary: form.salary_type === 'monthly' ? parseFloat(form.monthly_salary) : 0 }
           )
         }
 
@@ -300,6 +309,7 @@ export default function AdminEmployees() {
           status:       isTrial ? 'trial' : 'active',
           confirmed_at: isTrial ? null : new Date().toISOString(),
           notes:        notesMetadata,
+          ...(form.show_salary ? {} : { show_salary: false }),
         })
 
         // Parolning shifrlangan nusxasi — admin keyin "Ko'rsatish" bilan ko'ra oladi
@@ -314,12 +324,13 @@ export default function AdminEmployees() {
         }
 
         // Stavka belgilash
-        if (form.hourly_rate) {
+        if (form.salary_type === 'monthly' ? form.monthly_salary : form.hourly_rate) {
           await salaryRateFunctions.set(
             newEmp.id,
-            parseFloat(form.hourly_rate),
+            parseFloat(form.hourly_rate) || 0,
             form.hire_date,
-            user.id
+            user.id,
+            { monthlySalary: form.salary_type === 'monthly' ? parseFloat(form.monthly_salary) : 0 }
           )
         }
 
@@ -490,7 +501,10 @@ export default function AdminEmployees() {
                         <ScheduleShort schedules={emp.work_schedules} />
                       </td>
                       <td className="table-cell text-right">
-                        {rate ? formatMoney(rate.hourly_rate) : <span className="text-slate-400">—</span>}
+                        <span className="inline-flex items-center gap-1.5 justify-end">
+                          {emp.show_salary === false && <span title="Xodimga oyligi ko'rsatilmaydi"><LuEyeOff size={14} className="text-slate-400" /></span>}
+                          {rate ? formatRate(rate) : <span className="text-slate-400">—</span>}
+                        </span>
                       </td>
                       <td className="table-cell"><StatusBadge emp={emp} /></td>
                       <td className="table-cell">
@@ -527,7 +541,7 @@ export default function AdminEmployees() {
                       <StatusBadge emp={emp} />
                     </div>
                     <p className="text-sm text-slate-500 truncate">
-                      {emp.position || '—'}{rate ? ` · ${formatMoney(rate.hourly_rate)}/soat` : ''}
+                      {emp.position || '—'}{rate ? ` · ${formatRate(rate)}` : ''}
                     </p>
                   </div>
                 </button>
@@ -596,7 +610,30 @@ export default function AdminEmployees() {
                       )}
                     </div>
                     <InputField label="Ishga kirgan sana" value={form.hire_date} onChange={v => setForm({...form, hire_date: v})} type="date" required />
-                    <InputField label="Bir soatlik maosh (so'm)" value={form.hourly_rate} onChange={v => setForm({...form, hourly_rate: v})} type="number" placeholder="25000" />
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="label">Maosh turi</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[['hourly', 'Soatbay', 'Ishlagan soatiga qarab'], ['monthly', 'Oylik', 'Belgilangan summa, soat hisoblanmaydi']].map(([v, t, d]) => (
+                          <button key={v} type="button" onClick={() => setForm({...form, salary_type: v})}
+                            className={`text-left rounded-lg border px-3 py-2.5 cursor-pointer ${form.salary_type === v ? 'border-emerald-600 bg-emerald-50' : 'border-slate-300 hover:border-slate-400'}`}>
+                            <p className="text-sm font-medium text-slate-900">{t}</p>
+                            <p className="text-xs text-slate-500">{d}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {form.salary_type === 'monthly'
+                      ? <InputField label="Oylik maosh (so'm)" value={form.monthly_salary} onChange={v => setForm({...form, monthly_salary: v})} type="number" placeholder="5000000" />
+                      : <InputField label="Bir soatlik maosh (so'm)" value={form.hourly_rate} onChange={v => setForm({...form, hourly_rate: v})} type="number" placeholder="25000" />}
+                    {form.salary_type === 'monthly' && (
+                      <p className="text-xs text-slate-500">Keldi-ketdi yoziladi va ko'rinadi, lekin pul soatga qarab hisoblanmaydi — oyiga shu summa.</p>
+                    )}
+                    <p className="text-xs text-slate-500">
+                      Ixtiyoriy. Maosh yozilsa — xodim o'z oyligini ilovada ko'radi. Bo'sh qoldirilsa — xodim faqat ishlagan vaqtini ko'radi, chek o'rnida "Ish haqingizni admin hisoblab aytadi" yozuvi chiqadi.
+                    </p>
+                    <SalaryVisibilitySwitch checked={form.show_salary} onChange={v => setForm({ ...form, show_salary: v })} />
                   </div>
                 </FormSection>
 
@@ -786,8 +823,11 @@ export default function AdminEmployees() {
                       <InfoRow label="Telefon" value={emp.phone || '—'} />
                       <InfoRow label="Ishga kirgan" value={formatTashkentDate(emp.hire_date)} />
                       <InfoRow label="Doimiy qilingan" value={emp.confirmed_at ? formatTashkentDate(emp.confirmed_at) : '—'} />
-                      <InfoRow label="Bir soatlik maosh" value={currentRate ? formatMoney(currentRate.hourly_rate) : '—'} />
+                      <InfoRow label={isMonthlyRate(currentRate) ? 'Oylik maosh' : 'Bir soatlik maosh'} value={formatRate(currentRate)} />
                     </dl>
+                    <div className="mt-3">
+                      <SalaryVisibilityQuick emp={emp} onChanged={(v) => { setSelectedEmployee({ ...emp, show_salary: v }); load() }} />
+                    </div>
                   </FormSection>
 
                   {/* Tizimga kirish: email, parol, oxirgi kirish */}
@@ -835,7 +875,7 @@ export default function AdminEmployees() {
                       <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg">
                         {rateHistory.map(rate => (
                           <div key={rate.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
-                            <span className="text-slate-900 font-medium">{formatMoney(rate.hourly_rate)} / soat</span>
+                            <span className="text-slate-900 font-medium">{formatRate(rate)}</span>
                             <span className="text-slate-500 text-right">
                               {formatTashkentDate(rate.effective_from)}
                               {rate.effective_to ? ` — ${formatTashkentDate(rate.effective_to)}` : ' — hozirgacha'}
@@ -1117,6 +1157,62 @@ function InputField({ label, value, onChange, type = 'text', placeholder, requir
         className="input-field"
         required={required}
       />
+    </div>
+  )
+}
+
+// Xodim ilovada oyligini ko'radimi — faqat admin hal qiladi
+function SalaryVisibilitySwitch({ checked, onChange, disabled }) {
+  return (
+    <label className={`flex items-center justify-between gap-4 rounded-lg border border-slate-200 px-4 py-3 ${disabled ? 'opacity-60' : 'cursor-pointer hover:bg-slate-50'}`}>
+      <span className="min-w-0">
+        <span className="flex items-center gap-1.5 text-sm font-medium text-slate-900">
+          {checked ? <LuEye size={15} className="text-emerald-700" /> : <LuEyeOff size={15} className="text-slate-400" />}
+          Xodimga oyligini ko'rsatish
+        </span>
+        <span className="block text-xs text-slate-500 mt-0.5">
+          {checked
+            ? "Xodim ilovada oyligi va chekini ko'radi"
+            : "Xodim faqat ishlagan vaqtini ko'radi — \"Ish haqingizni admin hisoblab aytadi\""}
+        </span>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors cursor-pointer ${checked ? 'bg-emerald-600' : 'bg-slate-300'}`}
+      >
+        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-5' : 'translate-x-0.5'}`} />
+      </button>
+    </label>
+  )
+}
+
+// Xodim haqida panelida — darhol saqlanadi
+function SalaryVisibilityQuick({ emp, onChanged }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const checked = emp.show_salary !== false
+
+  const toggle = async (v) => {
+    setBusy(true); setError('')
+    const { error } = await supabase.from('employees').update({ show_salary: v }).eq('id', emp.id)
+    setBusy(false)
+    if (error) {
+      setError(error.message?.includes('show_salary')
+        ? "Supabase'da 020_show_salary_toggle.sql hali ishga tushirilmagan"
+        : error.message)
+      return
+    }
+    onChanged(v)
+  }
+
+  return (
+    <div>
+      <SalaryVisibilitySwitch checked={checked} onChange={toggle} disabled={busy} />
+      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
     </div>
   )
 }

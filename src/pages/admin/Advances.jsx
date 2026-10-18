@@ -4,7 +4,7 @@ import {
 } from "react-icons/lu"
 import {
   advanceFunctions, employeeFunctions, formatMoney,
-  formatTashkentDateTime
+  formatTashkentDateTime, supabase
 } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
 import * as XLSX from 'xlsx'
@@ -35,7 +35,15 @@ export default function AdminAdvances() {
         advanceFunctions.getAll(empFilter ? { employeeId: empFilter } : {}),
         employeeFunctions.getAll({ status: 'active' }),
       ])
-      setAdvances(advs.filter(a => matchEmployee(a.employees)))
+      const list = advs.filter(a => matchEmployee(a.employees))
+      // Kim bergani: admin yoki menejer ismi
+      const ids = [...new Set(list.map(a => a.given_by).filter(Boolean))]
+      if (ids.length) {
+        const { data: who } = await supabase.rpc('payment_recorders', { p_ids: ids })
+        const byId = Object.fromEntries((who || []).map(w => [w.id, w]))
+        list.forEach(a => { a.giver = byId[a.given_by] })
+      }
+      setAdvances(list)
       setEmployees(emps.filter(matchEmployee))
     } catch (err) {
       console.error(err)
@@ -94,6 +102,7 @@ export default function AdminAdvances() {
       "Summa":    a.amount,
       "To'lov turi": a.payment_type,
       "Sana":     formatTashkentDateTime(a.created_at),
+      "Kim berdi": a.giver ? `${a.giver.full_name}${a.giver.role === 'manager' ? ' (menejer)' : ''}` : (a.given_by ? 'Admin' : '—'),
       "Izoh":     a.notes || '—',
       "Holat":    a.status === 'active' ? 'Faol' : 'Bekor qilingan',
     }))
@@ -179,6 +188,7 @@ export default function AdminAdvances() {
                 <th className="table-head">Summa</th>
                 <th className="table-head hidden md:table-cell">To'lov turi</th>
                 <th className="table-head hidden lg:table-cell">Sana</th>
+                <th className="table-head">Kim berdi</th>
                 <th className="table-head hidden lg:table-cell">Izoh</th>
                 <th className="table-head">Holat</th>
                 <th className="table-head">Amallar</th>
@@ -194,6 +204,11 @@ export default function AdminAdvances() {
                   </td>
                   <td className="table-cell hidden lg:table-cell text-xs text-dark-400">
                     {formatTashkentDateTime(adv.created_at)}
+                  </td>
+                  <td className="table-cell text-sm">
+                    {adv.giver?.role === 'manager'
+                      ? <span className="badge-blue">{adv.giver.full_name} · menejer</span>
+                      : <span className="text-slate-600">{adv.giver?.full_name || (adv.given_by ? 'Admin' : '—')}</span>}
                   </td>
                   <td className="table-cell hidden lg:table-cell text-xs text-dark-500">
                     {adv.notes || '—'}

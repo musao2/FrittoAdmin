@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { LuCreditCard, LuRefreshCw, LuDownload } from "react-icons/lu"
-import { payrollFunctions, formatMoney, formatTashkentDateTime } from '../../lib/supabase'
+import { payrollFunctions, formatMoney, formatTashkentDateTime, supabase } from '../../lib/supabase'
 import * as XLSX from 'xlsx'
 import PaymentMethod from '../../components/admin/PaymentMethod'
 import { useBranch } from '../../context/BranchContext'
+
+const recorderLabel = (p) => p.recorder
+  ? `${p.recorder.full_name}${p.recorder.role === 'manager' ? ' (menejer)' : ''}`
+  : (p.recorded_by ? 'Admin' : '—')
 
 export default function AdminPayments() {
   const { matchEmployee } = useBranch()
@@ -21,7 +25,15 @@ export default function AdminPayments() {
         from: dateFrom ? `${dateFrom}T00:00:00` : undefined,
         to:   dateTo   ? `${dateTo}T23:59:59`   : undefined,
       })
-      setPayments(data.filter(p => matchEmployee(p.employees)))
+      const list = data.filter(p => matchEmployee(p.employees))
+      // Kim bergani: admin yoki menejer ismi
+      const ids = [...new Set(list.map(p => p.recorded_by).filter(Boolean))]
+      if (ids.length) {
+        const { data: who } = await supabase.rpc('payment_recorders', { p_ids: ids })
+        const byId = Object.fromEntries((who || []).map(w => [w.id, w]))
+        list.forEach(p => { p.recorder = byId[p.recorded_by] })
+      }
+      setPayments(list)
     } catch (err) {
       console.error(err)
     } finally {
@@ -39,6 +51,7 @@ export default function AdminPayments() {
       "Summa":        p.amount,
       "To'lov usuli": p.payment_method,
       "Sana":         formatTashkentDateTime(p.payment_date),
+      "Kim berdi":    recorderLabel(p),
       "Izoh":         p.notes || '—',
     }))
     const ws = XLSX.utils.json_to_sheet(rows)
@@ -97,6 +110,7 @@ export default function AdminPayments() {
                 <th className="table-head">Summa</th>
                 <th className="table-head hidden md:table-cell">Usul</th>
                 <th className="table-head">Sana</th>
+                <th className="table-head">Kim berdi</th>
                 <th className="table-head hidden lg:table-cell">Izoh</th>
               </tr>
             </thead>
@@ -109,6 +123,11 @@ export default function AdminPayments() {
                     <PaymentMethod method={pay.payment_method} />
                   </td>
                   <td className="table-cell text-xs text-dark-400">{formatTashkentDateTime(pay.payment_date)}</td>
+                  <td className="table-cell text-sm">
+                    {pay.recorder?.role === 'manager'
+                      ? <span className="badge-blue">{pay.recorder.full_name} · menejer</span>
+                      : <span className="text-slate-600">{recorderLabel(pay)}</span>}
+                  </td>
                   <td className="table-cell hidden lg:table-cell text-xs text-dark-500">{pay.notes || '—'}</td>
                 </tr>
               ))}

@@ -21,6 +21,7 @@ import AdminReports      from './pages/admin/Reports'
 import AdminSettings     from './pages/admin/Settings'
 import AdminDevices      from './pages/admin/Devices'
 import AdminBranches     from './pages/admin/Branches'
+import AdminManagers     from './pages/admin/Managers'
 import BranchPrint       from './pages/admin/BranchPrint'
 import { BranchProvider } from './context/BranchContext'
 
@@ -69,6 +70,7 @@ function AppRoutes() {
         <Route path="settings"   element={<AdminSettings />} />
         <Route path="devices"    element={<AdminDevices />} />
         <Route path="branches"   element={<AdminBranches />} />
+        <Route path="managers"   element={<AdminManagers />} />
       </Route>
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>

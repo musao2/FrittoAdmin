@@ -15,6 +15,7 @@ import {
   LuX,
   LuShieldCheck,
   LuMapPin,
+  LuUserCog,
 } from 'react-icons/lu'
 import { FiBarChart2 } from 'react-icons/fi'
 import NotificationBell from '../components/admin/NotificationBell'
@@ -39,6 +40,7 @@ const NAV_GROUPS = [
       { path: '/admin/attendance', label: 'Davomat',            icon: LuClock },
       { path: '/admin/devices',    label: 'Kirish so\'rovlari', icon: LuShieldCheck, badge: 'devices' },
       { path: '/admin/branches',   label: 'Filiallar va QR',    icon: LuMapPin },
+      { path: '/admin/managers',   label: 'Menejerlar',         icon: LuUserCog },
     ],
   },
   {

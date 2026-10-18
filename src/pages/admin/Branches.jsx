@@ -166,20 +166,34 @@ function BranchForm({ initial, onClose, onSaved }) {
     if (!navigator.geolocation) return setError("Bu brauzer joylashuvni aniqlay olmaydi")
     setLocating(true)
     setError('')
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        setF(x => ({ ...x, latitude: pos.coords.latitude.toFixed(6), longitude: pos.coords.longitude.toFixed(6) }))
-        setAccuracy(Math.round(pos.coords.accuracy))
-        setLocating(false)
-      },
-      err => {
-        setLocating(false)
-        setError(err.code === 1
+    // GPS birinchi o'lchovda adashadi — 15 soniya kuzatib, eng aniq natijani olamiz
+    let best = null
+    let done = false
+    const finish = (err) => {
+      if (done) return
+      done = true
+      navigator.geolocation.clearWatch(watchId)
+      clearTimeout(timer)
+      setLocating(false)
+      if (best) {
+        setF(x => ({ ...x, latitude: best.coords.latitude.toFixed(6), longitude: best.coords.longitude.toFixed(6) }))
+        setAccuracy(Math.round(best.coords.accuracy))
+      } else {
+        setError(err?.code === 1
           ? "Joylashuvga ruxsat berilmadi. Brauzer sozlamalarida shu saytga joylashuvni yoqing."
           : "Joylashuvni aniqlab bo'lmadi. Qayta urinib ko'ring yoki xaritadan havola qo'ying.")
+      }
+    }
+    const watchId = navigator.geolocation.watchPosition(
+      pos => {
+        if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos
+        setAccuracy(Math.round(best.coords.accuracy))
+        if (pos.coords.accuracy <= 10) finish()
       },
+      err => finish(err),
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     )
+    const timer = setTimeout(() => finish(), 15000)
   }
 
   const applyLink = (v) => {
@@ -246,14 +260,14 @@ function BranchForm({ initial, onClose, onSaved }) {
             <section className="space-y-4">
               <div>
                 <h3 className="text-sm font-semibold text-slate-900">Joylashuv *</h3>
-                <p className="text-xs text-slate-500 mt-0.5">Eng aniq yo'l — filial ichida turib quyidagi tugmani bosing.</p>
+                <p className="text-xs text-slate-500 mt-0.5">Eng aniq yo'l — filial ichida turib, <b>telefondan</b> quyidagi tugmani bosing. Kompyuterda joylashuv 50–500 metr xato bo'lishi mumkin.</p>
               </div>
 
               <button type="button" onClick={useMyLocation} disabled={locating} className="btn-secondary w-full">
                 {locating
                   ? <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-700 rounded-full animate-spin" />
                   : <LuLocateFixed size={16} />}
-                {locating ? 'Aniqlanmoqda...' : 'Hozirgi joylashuvimni olish'}
+                {locating ? `Aniqlanmoqda...${accuracy != null ? ` ±${accuracy} m` : ''}` : 'Hozirgi joylashuvimni olish'}
               </button>
               {accuracy != null && (
                 <p className={`text-xs ${accuracy > 30 ? 'text-amber-700' : 'text-green-700'}`}>

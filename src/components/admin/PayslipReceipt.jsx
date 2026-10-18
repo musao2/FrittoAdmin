@@ -94,13 +94,15 @@ export default function PayslipReceipt({ item, data, loading, month, year, onClo
               <SectionTitle>ISHLADI</SectionTitle>
               <Line label="Kunlar" value={`${item.worked_days || 0} kun`} />
               <Line label="Soatlar" value={`${hours} soat`} />
-              {data.hourlyRate && <Line label="Bir soati" value={formatMoney(data.hourlyRate)} />}
+              {data.monthlySalary
+                ? <Line label="Belgilangan oylik" value={formatMoney(data.monthlySalary)} />
+                : data.hourlyRate ? <Line label="Bir soati" value={formatMoney(data.hourlyRate)} /> : null}
 
               <Dashed />
 
               {/* Hisob */}
               <SectionTitle>HISOB</SectionTitle>
-              <Line label="Ishlab topdi" value={`+${formatMoney(earned)}`} />
+              <Line label={data.monthlySalary ? 'Oylik maosh' : 'Ishlab topdi'} value={`+${formatMoney(earned)}`} />
               {bonus > 0 && <Line label="Bonus" value={`+${formatMoney(bonus)}`} tone="text-green-700" />}
               {fine > 0 && <Line label="Jarima" value={`−${formatMoney(fine)}`} tone="text-red-600" />}
               <Line
