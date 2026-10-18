@@ -23,7 +23,7 @@ export default function BranchPrint() {
   if (!branch) return <div className="p-8 text-sm text-slate-500">Yuklanmoqda...</div>
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 print:p-0 print:bg-white">
+    <div className="min-h-screen py-8 print:p-0" style={{ backgroundColor: '#FFF4DC' }}>
       <div className="max-w-[210mm] mx-auto mb-4 flex items-center justify-between gap-3 px-4 print:hidden">
         <p className="text-sm text-slate-600">A4 varaqqa chop eting va filial kirish joyiga yopishtiring.</p>
         <button onClick={() => window.print()} className="btn-primary">
@@ -32,15 +32,19 @@ export default function BranchPrint() {
       </div>
 
       {/* A4 plakat */}
-      <div className="print-area mx-auto bg-white w-[210mm] h-[297mm] shadow-lg print:shadow-none flex flex-col items-center justify-between px-[18mm] py-[16mm] text-center">
+      {/* Sariq fon chop etishda ham chiqishi uchun: print-color-adjust: exact */}
+      <div
+        className="print-area mx-auto bg-[#FCA914] w-[210mm] h-[297mm] shadow-lg print:shadow-none flex flex-col items-center justify-between px-[18mm] py-[16mm] text-center"
+        style={{ backgroundColor: '#FCA914', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
+      >
         <FrittoLogo className="h-[28mm] w-auto text-[#111111]" />
 
         <div className="w-full">
           <p className="font-heading font-bold text-[13mm] leading-tight text-[#111111]">Davomat</p>
-          <p className="text-[6mm] text-slate-600 mt-[2mm]">Kelganda va ketganda skanerlang</p>
+          <p className="text-[6mm] text-[#111111]/75 mt-[2mm]">Kelganda va ketganda skanerlang</p>
         </div>
 
-        <div className="rounded-[6mm] border-[1.5mm] border-[#FCA914] p-[6mm]">
+        <div className="rounded-[6mm] bg-white border-[1.5mm] border-[#111111] p-[6mm]">
           <QRCodeSVG
             value={branchQrUrl(branch.qr_code)}
             size={512}
@@ -59,15 +63,15 @@ export default function BranchPrint() {
             { icon: LuCircleCheck, text: '«Keldi» yoki «Ketdi» degan yozuv chiqadi' },
           ].map(({ icon: Icon, text }, i) => (
             <div key={i} className="flex gap-[2.5mm] items-start">
-              <span className="w-[8mm] h-[8mm] rounded-full bg-[#FCA914] text-[#111111] flex items-center justify-center flex-shrink-0">
+              <span className="w-[8mm] h-[8mm] rounded-full bg-[#111111] text-[#FCA914] flex items-center justify-center flex-shrink-0">
                 <Icon style={{ width: '4.5mm', height: '4.5mm' }} />
               </span>
-              <span className="text-[3.6mm] leading-snug text-slate-700">{text}</span>
+              <span className="text-[3.6mm] leading-snug text-[#111111]">{text}</span>
             </div>
           ))}
         </div>
 
-        <div className="w-full border-t border-slate-200 pt-[4mm] flex items-center justify-between text-[3.4mm] text-slate-500">
+        <div className="w-full border-t border-[#111111]/25 pt-[4mm] flex items-center justify-between text-[3.4mm] text-[#111111]/75">
           <span className="font-heading font-bold text-[#111111] text-[4.5mm]">{branch.name}</span>
           <span>{branch.address || ''}</span>
         </div>
