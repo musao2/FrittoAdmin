@@ -23,3 +23,6 @@ ALTER TABLE public.salary_rates
 ALTER TABLE public.salary_rates DROP CONSTRAINT IF EXISTS salary_rates_monthly_salary_check;
 ALTER TABLE public.salary_rates
   ADD CONSTRAINT salary_rates_monthly_salary_check CHECK (monthly_salary >= 0);
+
+-- Supabase yangi ustunlarni darhol ko'rsin
+NOTIFY pgrst, 'reload schema';

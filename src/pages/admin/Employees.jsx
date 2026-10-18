@@ -238,7 +238,7 @@ export default function AdminEmployees() {
       const schedulesToSave = buildSchedulesToSave(form.branch)
 
       if (editMode) {
-        await employeeFunctions.update(selectedEmployee.id, {
+        const updateData = {
           full_name:   form.full_name,
           phone:       form.phone,
           telegram_id: form.telegram_id,
@@ -250,7 +250,15 @@ export default function AdminEmployees() {
           notes:       notesMetadata,
           // faqat o'zgarganda yuboramiz (020 hali ishga tushmagan bazada ham saqlash ishlasin)
           ...(form.show_salary !== (selectedEmployee.show_salary !== false) ? { show_salary: form.show_salary } : {}),
-        })
+        }
+        try {
+          await employeeFunctions.update(selectedEmployee.id, updateData)
+        } catch (err) {
+          // 020_show_salary_toggle.sql hali ishga tushmagan — qolgan ma'lumotlarni baribir saqlaymiz
+          if (!String(err?.message).includes('show_salary')) throw err
+          const { show_salary: _skip, ...rest } = updateData
+          await employeeFunctions.update(selectedEmployee.id, rest)
+        }
 
         // Test rejimi o'zgarishi
         if (form.is_trial && selectedEmployee.status !== 'trial') {

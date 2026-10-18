@@ -40,3 +40,6 @@ CREATE POLICY "adjustments_own_select" ON public.payroll_adjustments
 DROP POLICY IF EXISTS employees_manager_insert ON public.employees;
 CREATE POLICY employees_manager_insert ON public.employees
   FOR INSERT WITH CHECK (public.manager_can('add_employees') AND show_salary = TRUE);
+
+-- Supabase yangi ustunni darhol ko'rsin
+NOTIFY pgrst, 'reload schema';
