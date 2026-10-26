@@ -3,6 +3,7 @@ import { LuSettings, LuInfo, LuDatabase, LuCircleCheck, LuCircleX, LuTriangleAle
 import KioskLoginSettings from '../../components/admin/KioskLoginSettings'
 import AdminAccountSettings from '../../components/admin/AdminAccountSettings'
 import PasswordCopyBulk from '../../components/admin/PasswordCopyBulk'
+import TelegramSettings from '../../components/admin/TelegramSettings'
 import { Link } from 'react-router-dom'
 import { LuMapPin, LuChevronRight } from 'react-icons/lu'
 
@@ -35,6 +36,8 @@ export default function AdminSettings() {
       <AdminAccountSettings />
 
       <PasswordCopyBulk />
+
+      <TelegramSettings />
 
       <Link to="/admin/branches" className="card flex items-center gap-4 hover:border-slate-300">
         <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0">
