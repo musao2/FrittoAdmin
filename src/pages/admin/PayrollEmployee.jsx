@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { LuArrowLeft, LuChevronLeft, LuChevronRight, LuReceipt } from 'react-icons/lu'
+import { LuArrowLeft, LuChevronLeft, LuChevronRight, LuReceipt, LuPencil } from 'react-icons/lu'
+import { useAuth } from '../../context/AuthContext'
+import DayEditor from '../../components/admin/DayEditor'
 import {
   supabase, employeeFunctions, attendanceFunctions, payrollFunctions,
   formatMoney,
@@ -40,6 +42,9 @@ export default function AdminPayrollEmployee() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
   const [data, setData]       = useState(null)
+  const [editDay, setEditDay] = useState(null)
+  const [reload, setReload]   = useState(0)
+  const { user } = useAuth()
 
   useEffect(() => {
     let alive = true
@@ -77,7 +82,7 @@ export default function AdminPayrollEmployee() {
     }
     load()
     return () => { alive = false }
-  }, [employeeId, year, month])
+  }, [employeeId, year, month, reload])
 
   const goMonth = (delta) => {
     const d = new Date(year, month - 1 + delta, 1)
@@ -215,13 +220,19 @@ export default function AdminPayrollEmployee() {
                     <th className="table-head text-right">Ishladi</th>
                     <th className="table-head text-right">Topdi</th>
                     <th className="table-head">Holat</th>
+                    <th className="table-head w-10" />
                   </tr>
                 </thead>
                 <tbody>
                   {days.map(d => {
                     const muted = !d.list.length
                     return (
-                      <tr key={d.key} className={`table-row ${d.status === 'off' || d.status === 'future' ? 'bg-slate-50/60' : ''}`}>
+                      <tr
+                        key={d.key}
+                        onClick={() => d.status !== 'future' && setEditDay(d)}
+                        title={d.status !== 'future' ? 'Bosing — kunni tahrirlash' : undefined}
+                        className={`table-row group ${d.status !== 'future' ? 'cursor-pointer' : ''} ${d.status === 'off' || d.status === 'future' ? 'bg-slate-50/60' : ''}`}
+                      >
                         <td className="table-cell">
                           <p className={muted ? 'text-slate-500' : 'text-slate-900 font-medium'}>{d.day}-{MONTHS[month - 1].toLowerCase()}</p>
                           <p className="text-xs text-slate-400">{WEEKDAYS[d.weekday]}</p>
@@ -240,6 +251,11 @@ export default function AdminPayrollEmployee() {
                           {d.earned ? formatMoney(d.earned) : <span className="text-slate-300 font-normal">—</span>}
                         </td>
                         <td className="table-cell"><DayStatus d={d} /></td>
+                        <td className="table-cell text-right">
+                          {d.status !== 'future' && (
+                            <LuPencil size={15} className="text-slate-300 group-hover:text-emerald-700 inline" />
+                          )}
+                        </td>
                       </tr>
                     )
                   })}
@@ -249,7 +265,7 @@ export default function AdminPayrollEmployee() {
                     <td className="table-cell font-semibold text-slate-900" colSpan={3}>Jami: {totals.days} kun</td>
                     <td className="table-cell text-right font-semibold text-slate-900 tabular-nums">{hoursText(totals.worked)}</td>
                     <td className="table-cell text-right font-semibold text-slate-900 tabular-nums">{formatMoney(totals.earned)}</td>
-                    <td className="table-cell" />
+                    <td className="table-cell" colSpan={2} />
                   </tr>
                 </tfoot>
               </table>
@@ -305,6 +321,16 @@ export default function AdminPayrollEmployee() {
             </div>
           </div>
         </>
+      )}
+
+      {editDay && (
+        <DayEditor
+          day={editDay}
+          employee={emp}
+          adminId={user?.id}
+          onClose={() => setEditDay(null)}
+          onSaved={() => { setEditDay(null); setReload(x => x + 1) }}
+        />
       )}
     </div>
   )
