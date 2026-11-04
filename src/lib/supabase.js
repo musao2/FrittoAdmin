@@ -837,9 +837,9 @@ export const advanceFunctions = {
     const { data, error } = await supabase
       .from('advances')
       .insert({
-        ...advanceData,
         status: 'active',
         created_at: new Date().toISOString(),
+        ...advanceData, // created_at berilsa — o'sha sana (boshqa oy hisobidan avans)
       })
       .select()
       .single()
